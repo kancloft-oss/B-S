@@ -17,6 +17,7 @@ import { Button } from "./components/ui/button";
 import { SearchBar } from "./components/SearchBar";
 import { seedDatabase } from "./lib/seed-data";
 import { useEffect, useState, useRef } from "react";
+import logo from "./logo.png";
 
 function AppContent() {
   const { cartCount } = useCart();
@@ -81,13 +82,12 @@ function AppContent() {
       {/* Desktop Header - Main (Sticky) */}
       <header className="hidden md:block sticky top-0 z-50 bg-white border-b border-brand-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-[90px] flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2 shrink-0">
-            <div className="bg-brand-red text-white p-1 rounded-lg flex items-center justify-center overflow-hidden">
+          <Link to="/" className="flex items-center shrink-0">
+            <div className="flex items-center justify-center overflow-hidden">
               <img 
-                src="https://picsum.photos/seed/art-logo/200/200" 
-                alt="Art Logo" 
-                className="w-16 h-16 object-contain invert"
-                referrerPolicy="no-referrer"
+                src={logo} 
+                alt="Brushes and Sisters" 
+                className="h-20 w-auto object-contain"
               />
             </div>
           </Link>
@@ -163,12 +163,11 @@ function AppContent() {
         {/* Top Row: h-[52px] */}
         <div className="w-full px-4 pt-3 pb-2 flex items-center justify-between gap-2 h-[52px]">
           <div className="flex items-center gap-2 shrink-0">
-            <Link to="/" className="bg-brand-red text-white p-1 rounded flex items-center justify-center shrink-0 overflow-hidden">
+            <Link to="/" className="flex items-center justify-center shrink-0 overflow-hidden">
               <img 
-                src="https://picsum.photos/seed/art-logo/200/200" 
+                src={logo} 
                 alt="Logo" 
-                className="w-6 h-6 object-contain invert"
-                referrerPolicy="no-referrer"
+                className="h-10 w-auto object-contain"
               />
             </Link>
             <div className="flex items-center gap-1 text-sm font-medium text-zinc-900 cursor-pointer">
