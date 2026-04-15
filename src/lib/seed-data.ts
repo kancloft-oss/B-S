@@ -1,5 +1,5 @@
 import { collection, getDocs, writeBatch, doc } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 
 export const productsData = [
   // Кисти (5)
@@ -35,6 +35,14 @@ export async function seedDatabase() {
   try {
     const productsRef = collection(db, "products");
     console.log("Seeding database with initial products...");
+    
+    // Check if products already exist to avoid unnecessary writes
+    const snapshot = await getDocs(productsRef);
+    if (!snapshot.empty) {
+      console.log("Database already has products, skipping seed.");
+      return;
+    }
+
     const batch = writeBatch(db);
     
     productsData.forEach((product) => {
@@ -45,6 +53,15 @@ export async function seedDatabase() {
     await batch.commit();
     console.log("Database seeded successfully!");
   } catch (error) {
-    console.error("Error seeding database:", error);
+    const errInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      auth: {
+        uid: auth.currentUser?.uid,
+        email: auth.currentUser?.email
+      },
+      operation: "seedDatabase",
+      path: "products"
+    };
+    console.error("Error seeding database:", JSON.stringify(errInfo));
   }
 }

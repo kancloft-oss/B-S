@@ -3,14 +3,10 @@ import { Navigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
 
 export const AdminRoute = ({ children }: { children: React.ReactElement }) => {
-  const { user, loading } = useAuth();
+  const isAdminAuthenticated = localStorage.getItem("admin_auth") === "true";
 
-  if (loading) {
-    return <div>Загрузка...</div>;
-  }
-
-  if (!user || user.email !== "kancloft@gmail.com") {
-    return <Navigate to="/account" replace />;
+  if (!isAdminAuthenticated) {
+    return <Navigate to="/admin/login" replace />;
   }
 
   return children;

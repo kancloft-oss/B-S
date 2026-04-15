@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } f
 import { Storefront } from "./pages/Storefront";
 import { ProductDetails } from "./pages/ProductDetails";
 import { AdminDashboard } from "./pages/AdminDashboard";
+import { AdminLogin } from "./pages/AdminLogin";
 import UserDashboard from "./pages/UserDashboard";
 import { AdminRoute } from "./components/AdminRoute";
 import { ShoppingCart, LayoutDashboard, Palette, Search, User, Menu, Settings, ShoppingBag, Heart, MapPin, Package, Home, ChevronDown, Briefcase, Phone, BarChart2, Percent } from "lucide-react";
@@ -24,7 +25,8 @@ function AppContent() {
   const { user, signInWithGoogle, signOutUser } = useAuth();
   const location = useLocation();
   const isMobileCartOrCheckout = location.pathname === '/cart' || location.pathname === '/checkout';
-  const isAdmin = user?.email === 'kancloft@gmail.com';
+  const isAdmin = user?.email === 'kancloft@gmail.com' || localStorage.getItem("admin_auth") === "true";
+  const isAdminPage = location.pathname.startsWith('/admin');
   
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const lastScrollY = useRef(0);
@@ -45,11 +47,23 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (isAdmin) {
+    // Only seed if the user is authenticated via Firebase as the admin
+    if (user?.email === 'kancloft@gmail.com') {
       seedDatabase();
     }
-  }, [isAdmin]);
+  }, [user]);
   
+  if (isAdminPage) {
+    return (
+      <div className="min-h-screen bg-zinc-50 font-sans">
+        <Routes>
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+        </Routes>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans pb-14 md:pb-0">
       {/* Desktop Header - Top Bar */}
@@ -72,6 +86,11 @@ function AppContent() {
               О нас <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
             </div>
             <span className="hover:text-brand-red cursor-pointer transition-colors">Инвесторам</span>
+            {isAdmin && (
+              <Link to="/admin" className="text-orange-600 font-bold hover:text-orange-700 transition-colors flex items-center gap-1">
+                <LayoutDashboard className="w-3.5 h-3.5" /> Админка
+              </Link>
+            )}
             <span className="text-zinc-900 font-bold hover:text-brand-red cursor-pointer transition-colors flex items-center gap-1">
               <Phone className="w-3.5 h-3.5 text-zinc-400" /> 8 800 550-37-71
             </span>
@@ -206,7 +225,6 @@ function AppContent() {
           <Route path="/cart" element={<Storefront view="cart" />} />
           <Route path="/checkout" element={<Storefront view="checkout" />} />
           <Route path="/account/*" element={user ? <UserDashboard /> : <Navigate to="/" replace />} />
-          <Route path="/admin/*" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
         </Routes>
       </main>
 
