@@ -3,6 +3,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Heart, ShoppingCart, Plus, Minus, ChevronRight, Star } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { useCart, Product } from "@/src/lib/cart-context";
+import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
+import { db } from "@/src/firebase";
 
 export function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -14,32 +16,41 @@ export function ProductDetails() {
   const { cart, favorites, addToCart, updateQuantity, toggleFavorite } = useCart();
 
   useEffect(() => {
-    setLoading(true);
-    // Fetch product details
-    fetch(`/api/products/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Product not found");
-        return res.json();
-      })
-      .then(data => {
-        setProduct(data);
-        setActiveImage(0);
+    const fetchProductDetails = async () => {
+      if (!id) return;
+      setLoading(true);
+      try {
+        const docRef = doc(db, "products", id);
+        const docSnap = await getDoc(docRef);
         
-        // Fetch similar products (same category)
-        fetch("/api/products")
-          .then(res => res.json())
-          .then(allProducts => {
-            const similar = allProducts
-              .filter((p: Product) => p.category === data.category && p.id !== data.id)
-              .slice(0, 5); // Take up to 5 similar products
-            setSimilarProducts(similar);
-            setLoading(false);
-          });
-      })
-      .catch(err => {
-        console.error(err);
+        if (docSnap.exists()) {
+          const productData = { id: docSnap.id, ...docSnap.data() } as Product;
+          setProduct(productData);
+          setActiveImage(0);
+          
+          // Fetch similar products
+          const q = query(
+            collection(db, "products"),
+            where("category", "==", productData.category),
+            limit(6)
+          );
+          const similarSnap = await getDocs(q);
+          const similar = similarSnap.docs
+            .map(d => ({ id: d.id, ...d.data() } as Product))
+            .filter(p => p.id !== id)
+            .slice(0, 5);
+          setSimilarProducts(similar);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error("Error fetching product details:", error);
+      } finally {
         setLoading(false);
-      });
+      }
+    };
+
+    fetchProductDetails();
   }, [id]);
 
   if (loading) {
@@ -50,7 +61,7 @@ export function ProductDetails() {
     return (
       <div className="text-center py-16">
         <h2 className="text-2xl font-bold mb-4">Товар не найден</h2>
-        <Button onClick={() => navigate("/")} className="bg-orange-500 hover:bg-orange-600 text-white">
+        <Button onClick={() => navigate("/")} className="bg-zinc-900 hover:bg-zinc-800 text-white font-bold">
           Вернуться в каталог
         </Button>
       </div>
@@ -63,43 +74,43 @@ export function ProductDetails() {
   const images = product.images && product.images.length > 0 ? product.images : [product.image];
 
   return (
-    <div className="pb-20 md:pb-8">
+    <div className="pb-20 md:pb-8 max-w-7xl mx-auto px-4">
       {/* Breadcrumbs */}
-      <div className="hidden md:flex items-center gap-2 text-sm text-zinc-500 mb-6">
-        <Link to="/" className="hover:text-zinc-900">Главная</Link>
+      <div className="hidden md:flex items-center gap-2 text-sm text-zinc-500 mb-6 mt-4">
+        <Link to="/" className="hover:text-brand-red transition-colors">Главная</Link>
         <ChevronRight className="w-4 h-4" />
-        <Link to="/" className="hover:text-zinc-900">{product.category}</Link>
+        <Link to="/" className="hover:text-brand-red transition-colors">{product.category}</Link>
         <ChevronRight className="w-4 h-4" />
         <span className="text-zinc-900 truncate">{product.name}</span>
       </div>
 
       {/* Mobile Back Button */}
-      <div className="md:hidden flex items-center gap-3 p-3 mb-2 bg-white sticky top-14 z-30 border-b border-zinc-100">
-        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-zinc-500 hover:text-zinc-900">
+      <div className="md:hidden flex items-center gap-3 p-3 mb-2 bg-white sticky top-14 z-30 border-b border-brand-border">
+        <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-zinc-500 hover:text-brand-red">
           <ArrowLeft className="w-6 h-6" />
         </button>
         <span className="font-medium text-sm truncate">{product.name}</span>
       </div>
 
-      <div className="bg-white md:rounded-3xl shadow-sm border-y md:border border-zinc-100 overflow-hidden mb-8">
-        <div className="grid md:grid-cols-2 gap-0 md:gap-8 p-0 md:p-8">
+      <div className="bg-white rounded-md border border-brand-border mb-8">
+        <div className="grid md:grid-cols-2 gap-0 md:gap-8 p-0 md:p-6">
           
           {/* Product Images */}
           <div className="flex flex-col gap-4 p-4 md:p-0">
-            <div className="relative aspect-square rounded-2xl overflow-hidden bg-zinc-100 border border-zinc-100">
+            <div className="relative aspect-square rounded-md overflow-hidden bg-brand-gray border border-brand-border">
               <img 
                 src={images[activeImage]} 
                 alt={product.name} 
                 className="w-full h-full object-cover mix-blend-multiply"
               />
-              <div className="absolute top-3 left-3 bg-red-500 text-white px-2 py-1 rounded-lg text-xs font-bold shadow-sm">
+              <div className="absolute top-3 left-3 bg-brand-red text-white px-2 py-1 text-xs font-bold rounded-sm">
                 -23%
               </div>
               <button 
                 onClick={() => toggleFavorite(product.id)}
-                className="absolute top-3 right-3 w-10 h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-sm text-zinc-400 hover:text-red-500 transition-colors"
+                className="absolute top-3 right-3 w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-brand-red transition-colors bg-white/80 backdrop-blur-sm rounded-full border border-brand-border"
               >
-                <Heart className={`w-5 h-5 ${isFavorite ? "fill-red-500 text-red-500" : ""}`} />
+                <Heart className={`w-5 h-5 ${isFavorite ? "fill-brand-red text-brand-red" : ""}`} />
               </button>
             </div>
             
@@ -109,9 +120,9 @@ export function ProductDetails() {
                   <button 
                     key={idx}
                     onClick={() => setActiveImage(idx)}
-                    className={`relative w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden border-2 shrink-0 transition-all ${activeImage === idx ? "border-orange-500" : "border-transparent hover:border-zinc-300"}`}
+                    className={`relative w-16 h-16 md:w-20 md:h-20 overflow-hidden border-2 shrink-0 transition-all rounded-md ${activeImage === idx ? "border-brand-red" : "border-transparent hover:border-brand-border"}`}
                   >
-                    <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply bg-zinc-100" />
+                    <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply bg-brand-gray" />
                   </button>
                 ))}
               </div>
@@ -119,13 +130,13 @@ export function ProductDetails() {
           </div>
 
           {/* Product Info */}
-          <div className="flex flex-col p-4 md:p-0 border-t md:border-t-0 border-zinc-100">
+          <div className="flex flex-col p-4 md:p-0 border-t md:border-t-0 border-brand-border">
             <div className="mb-6">
-              <div className="flex items-center gap-3 mb-3">
-                <span className="text-xs font-medium px-2.5 py-1 bg-zinc-100 text-zinc-600 rounded-md">
-                  Артикул: {product.sku || `ART-${product.id.padStart(5, '0')}`}
+              <div className="flex items-center gap-3 mb-4">
+                <span className="text-xs text-zinc-500">
+                  Код товара: {product.sku || `ART-${product.id.padStart(5, '0')}`}
                 </span>
-                <span className="text-xs font-medium text-green-600 bg-green-50 px-2.5 py-1 rounded-md">
+                <span className="text-xs text-emerald-600 font-medium bg-emerald-50 px-2 py-0.5 rounded-sm border border-emerald-100">
                   В наличии: {product.stock} шт.
                 </span>
               </div>
@@ -133,59 +144,97 @@ export function ProductDetails() {
                 {product.name}
               </h1>
               
-              <div className="flex items-end gap-3 mb-6">
-                <span className="text-3xl md:text-4xl font-black text-zinc-900 tracking-tight">{product.price} ₽</span>
-                <span className="text-lg text-zinc-400 line-through font-medium mb-1">{oldPrice} ₽</span>
+              <div className="flex items-center gap-2 mb-6 text-brand-yellow">
+                <Star className="w-4 h-4 fill-current" />
+                <Star className="w-4 h-4 fill-current" />
+                <Star className="w-4 h-4 fill-current" />
+                <Star className="w-4 h-4 fill-current" />
+                <Star className="w-4 h-4 fill-current text-zinc-300" />
+                <span className="text-sm text-brand-blue hover:text-brand-red cursor-pointer ml-2 transition-colors">12 отзывов</span>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 mb-8">
-                {inCart ? (
-                  <div className="flex items-center justify-between bg-zinc-100 rounded-2xl p-1.5 h-14 w-40">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-white text-zinc-600" onClick={() => updateQuantity(product.id, -1)}>
-                      <Minus className="w-5 h-5" />
-                    </Button>
-                    <span className="text-lg font-bold w-10 text-center">{inCart.quantity}</span>
-                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-white text-zinc-600" onClick={() => updateQuantity(product.id, 1)}>
-                      <Plus className="w-5 h-5" />
+              <div className="bg-brand-gray p-6 rounded-md border border-brand-border mb-8">
+                <div className="flex items-baseline gap-4 mb-6">
+                  <span className="text-4xl font-bold text-zinc-900">{product.price} ₽</span>
+                  <span className="text-lg text-zinc-400 line-through">{oldPrice} ₽</span>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center gap-3">
+                    {inCart ? (
+                      <div className="flex items-center justify-between bg-white rounded-md p-1 h-12 w-32 border border-brand-border">
+                        <Button variant="ghost" size="icon" className="h-10 w-10 hover:text-brand-red" onClick={() => updateQuantity(product.id, -1)}>
+                          <Minus className="w-4 h-4" />
+                        </Button>
+                        <span className="text-base font-bold w-8 text-center">{inCart.quantity}</span>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 hover:text-brand-red" onClick={() => updateQuantity(product.id, 1)}>
+                          <Plus className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button 
+                        className="flex-1 bg-brand-red hover:bg-brand-red-hover text-white rounded-md h-12 font-bold text-base transition-colors"
+                        onClick={() => addToCart(product)}
+                        disabled={product.stock === 0}
+                      >
+                        {product.stock === 0 ? "Нет в наличии" : "В корзину"}
+                      </Button>
+                    )}
+                    <Button variant="outline" className="flex-1 border-brand-border text-zinc-900 rounded-md h-12 font-medium hover:bg-zinc-50">
+                      Купить в 1 клик
                     </Button>
                   </div>
-                ) : (
-                  <Button 
-                    className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-2xl h-14 font-bold text-lg shadow-sm shadow-orange-500/20"
-                    onClick={() => addToCart(product)}
-                    disabled={product.stock === 0}
-                  >
-                    {product.stock === 0 ? "Нет в наличии" : "В корзину"}
-                  </Button>
+                </div>
+              </div>
+
+              {/* Delivery Info */}
+              <div className="bg-white border border-brand-border rounded-md p-4 mb-8 text-sm">
+                <div className="flex items-start gap-3 mb-3 pb-3 border-b border-brand-border">
+                  <div className="w-5 h-5 rounded-full bg-brand-gray flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-zinc-900">Самовывоз, завтра</div>
+                    <div className="text-zinc-500">Бесплатно</div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-5 h-5 rounded-full bg-brand-gray flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-2 h-2 rounded-full bg-brand-blue"></div>
+                  </div>
+                  <div>
+                    <div className="font-medium text-zinc-900">Курьером, завтра</div>
+                    <div className="text-zinc-500">от 290 ₽</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Description & Characteristics */}
+              <div className="space-y-8">
+                {product.description && (
+                  <div>
+                    <h3 className="text-lg font-bold mb-3">Описание</h3>
+                    <p className="text-zinc-600 text-sm leading-relaxed">
+                      {product.description}
+                    </p>
+                  </div>
+                )}
+
+                {product.characteristics && product.characteristics.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-bold mb-3">Характеристики</h3>
+                    <div className="space-y-0 text-sm">
+                      {product.characteristics.map((char, idx) => (
+                        <div key={idx} className="flex py-2 border-b border-brand-border last:border-0">
+                          <span className="text-zinc-500 w-1/2">{char.name}</span>
+                          <span className="text-zinc-900 font-medium w-1/2">{char.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-            </div>
-
-            {/* Description & Characteristics */}
-            <div className="space-y-8">
-              {product.description && (
-                <div>
-                  <h3 className="text-lg font-bold mb-3">Описание</h3>
-                  <p className="text-zinc-600 text-sm md:text-base leading-relaxed">
-                    {product.description}
-                  </p>
-                </div>
-              )}
-
-              {product.characteristics && product.characteristics.length > 0 && (
-                <div>
-                  <h3 className="text-lg font-bold mb-3">Характеристики</h3>
-                  <div className="space-y-2">
-                    {product.characteristics.map((char, idx) => (
-                      <div key={idx} className="flex py-2 border-b border-zinc-100 last:border-0 text-sm md:text-base">
-                        <span className="text-zinc-500 w-1/2">{char.name}</span>
-                        <span className="text-zinc-900 font-medium w-1/2">{char.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -194,63 +243,60 @@ export function ProductDetails() {
       {/* Similar Products */}
       {similarProducts.length > 0 && (
         <div className="px-3 md:px-0">
-          <h2 className="text-xl md:text-2xl font-bold tracking-tight mb-4 md:mb-6">
+          <h2 className="text-2xl font-bold mb-6">
             Похожие товары
           </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2 md:gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {similarProducts.map(similar => {
               const simInCart = cart.find(item => item.id === similar.id);
               const simOldPrice = Math.floor(similar.price * 1.3);
 
               return (
-                <div key={similar.id} className="bg-white rounded-2xl md:rounded-3xl p-2 md:p-3 flex flex-col hover:shadow-xl hover:shadow-zinc-200/50 transition-all border border-zinc-100 group relative">
+                <Link key={similar.id} to={`/product/${similar.id}`} className="group bg-white border border-brand-border rounded-md p-4 flex flex-col hover:shadow-lg transition-all relative">
                   <button 
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(similar.id); }}
-                    className="absolute top-3 right-3 z-10 w-8 h-8 md:w-10 md:h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-sm text-zinc-400 hover:text-red-500 transition-colors"
+                    className={`absolute top-3 right-3 z-10 p-1.5 rounded-full bg-white/80 backdrop-blur-sm border border-brand-border transition-colors ${favorites.includes(similar.id) ? 'text-brand-red' : 'text-zinc-400 hover:text-brand-red'}`}
                   >
-                    <Heart className={`w-4 h-4 md:w-5 md:h-5 ${favorites.includes(similar.id) ? "fill-red-500 text-red-500" : ""}`} />
+                    <Heart className={`w-5 h-5 ${favorites.includes(similar.id) ? 'fill-current' : ''}`} />
                   </button>
-                  <Link to={`/product/${similar.id}`} className="block relative aspect-[4/5] mb-2 md:mb-3 rounded-xl md:rounded-2xl overflow-hidden bg-zinc-100">
-                    <img 
-                      src={similar.image} 
-                      alt={similar.name} 
-                      className="w-full h-full object-cover mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-                    />
-                  </Link>
                   
-                  <div className="flex-1 flex flex-col">
-                    <Link to={`/product/${similar.id}`} className="block">
-                      <div className="flex items-baseline gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-                        <span className="text-base md:text-xl font-black text-zinc-900 tracking-tight">{similar.price} ₽</span>
-                        <span className="text-[10px] md:text-xs text-zinc-400 line-through font-medium">{simOldPrice} ₽</span>
-                      </div>
-                      
-                      <h3 className="text-[10px] md:text-xs text-zinc-900 font-medium line-clamp-2 mb-2 md:mb-3 flex-1 leading-tight md:leading-relaxed hover:text-orange-500 transition-colors">
-                        {similar.name}
-                      </h3>
-                    </Link>
+                  <div className="aspect-square mb-4 overflow-hidden rounded-md border border-brand-border bg-brand-gray">
+                    <img src={similar.image} alt={similar.name} className="w-full h-full object-cover mix-blend-multiply" />
+                  </div>
+                  
+                  <div className="flex items-center gap-1 mb-2 text-brand-yellow">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <Star className="w-3.5 h-3.5 fill-current text-zinc-300" />
+                    <span className="text-xs text-zinc-400 ml-1">12</span>
+                  </div>
 
+                  <div className="text-xl font-bold text-zinc-900 mb-1">{similar.price} ₽</div>
+                  <h3 className="text-sm text-brand-blue group-hover:text-brand-red transition-colors line-clamp-2 mb-4 flex-1">{similar.name}</h3>
+                  
+                  <div className="mt-auto">
                     {simInCart ? (
-                      <div className="flex items-center justify-between bg-zinc-100 rounded-lg md:rounded-xl p-1 mt-auto">
-                        <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-md md:rounded-lg hover:bg-white text-zinc-600" onClick={() => updateQuantity(similar.id, -1)}>
-                          <Minus className="w-3 h-3 md:w-4 md:h-4" />
-                        </Button>
-                        <span className="text-xs md:text-sm font-bold w-6 md:w-8 text-center">{simInCart.quantity}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-md md:rounded-lg hover:bg-white text-zinc-600" onClick={() => updateQuantity(similar.id, 1)}>
-                          <Plus className="w-3 h-3 md:w-4 md:h-4" />
-                        </Button>
+                      <div className="flex items-center justify-between bg-brand-gray rounded-md p-1 border border-brand-border" onClick={(e) => e.preventDefault()}>
+                        <button onClick={(e) => { e.preventDefault(); updateQuantity(similar.id, simInCart.quantity - 1); }} className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-brand-red">
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="font-medium text-sm">{simInCart.quantity} шт</span>
+                        <button onClick={(e) => { e.preventDefault(); updateQuantity(similar.id, simInCart.quantity + 1); }} className="w-8 h-8 flex items-center justify-center text-zinc-600 hover:text-brand-red" disabled={simInCart.quantity >= similar.stock}>
+                          <Plus className="w-4 h-4" />
+                        </button>
                       </div>
                     ) : (
                       <Button 
-                        className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-lg md:rounded-xl h-8 md:h-10 mt-auto font-semibold text-xs md:text-sm shadow-sm shadow-orange-200"
-                        onClick={() => addToCart(similar)}
-                        disabled={similar.stock === 0}
+                        onClick={(e) => { e.preventDefault(); addToCart(similar); }}
+                        className="w-full bg-white hover:bg-brand-red text-brand-red hover:text-white border border-brand-red rounded-md h-10 font-bold transition-colors"
                       >
-                        {similar.stock === 0 ? "Нет в наличии" : "В корзину"}
+                        В корзину
                       </Button>
                     )}
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>

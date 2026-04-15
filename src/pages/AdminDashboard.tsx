@@ -9,6 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/src/components/ui/ca
 import { Badge } from "@/src/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/src/components/ui/table";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { collection, getDocs, doc, updateDoc, getDoc } from "firebase/firestore";
+import { db } from "@/src/firebase";
 
 // --- Types ---
 interface Product {
@@ -55,7 +57,22 @@ function AnalyticsView() {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    fetch('/api/analytics').then(r => r.json()).then(setStats);
+    // Mock analytics for now, since we removed the backend
+    setStats({
+      revenue: 154000,
+      orders: 124,
+      customers: 89,
+      conversionRate: 3.2,
+      salesData: [
+        { date: "Пн", amount: 12000 },
+        { date: "Вт", amount: 15000 },
+        { date: "Ср", amount: 11000 },
+        { date: "Чт", amount: 18000 },
+        { date: "Пт", amount: 22000 },
+        { date: "Сб", amount: 35000 },
+        { date: "Вс", amount: 41000 },
+      ]
+    });
   }, []);
 
   if (!stats) return <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div></div>;
@@ -143,21 +160,44 @@ function OrdersView() {
 
   useEffect(() => {
     fetchOrders();
-    fetch('/api/products').then(r => r.json()).then(setProducts);
+    fetchProducts();
   }, []);
 
+  const fetchProducts = async () => {
+    const snapshot = await getDocs(collection(db, "products"));
+    setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+  };
+
   const fetchOrders = async () => {
-    const res = await fetch('/api/orders');
-    const data = await res.json();
-    setOrders(data);
+    const snapshot = await getDocs(collection(db, "orders"));
+    const ordersData = await Promise.all(snapshot.docs.map(async (orderDoc) => {
+      const orderData = orderDoc.data() as Omit<Order, 'id'>;
+      
+      const itemsWithProducts = await Promise.all(orderData.items.map(async (item) => {
+        try {
+          const productDoc = await getDoc(doc(db, "products", item.productId));
+          if (productDoc.exists()) {
+            return { ...item, product: { id: productDoc.id, ...productDoc.data() } as Product };
+          }
+        } catch (e) {
+          console.error("Error fetching product for order item", e);
+        }
+        return item;
+      }));
+
+      return {
+        id: orderDoc.id,
+        ...orderData,
+        items: itemsWithProducts
+      };
+    }));
+    
+    ordersData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    setOrders(ordersData);
   };
 
   const updateStatus = async (orderId: string, newStatus: string) => {
-    await fetch(`/api/orders/${orderId}/status`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: newStatus })
-    });
+    await updateDoc(doc(db, "orders", orderId), { status: newStatus });
     fetchOrders();
     if (selectedOrder && selectedOrder.id === orderId) {
       setSelectedOrder({ ...selectedOrder, status: newStatus });
@@ -213,10 +253,9 @@ function OrdersView() {
       return sum + (product?.price || 0) * item.qty;
     }, 0);
 
-    await fetch(`/api/orders/${selectedOrder.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items: editedItems, total: newTotal })
+    await updateDoc(doc(db, "orders", selectedOrder.id), {
+      items: editedItems.map(i => ({ productId: i.productId, qty: i.qty, price: i.product?.price || 0 })),
+      total: newTotal
     });
     
     setIsEditing(false);

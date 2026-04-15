@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { Package, CreditCard, Clock, CheckCircle2, Truck, AlertCircle, ChevronRight, LogOut, MapPin, Heart, Plus, Minus } from "lucide-react";
+import { Package, CreditCard, Clock, CheckCircle2, Truck, AlertCircle, ChevronRight, LogOut, MapPin, Heart, Plus, Minus, ShoppingCart, Star } from "lucide-react";
 import { useCart, Product } from "@/src/lib/cart-context";
 import { Link } from "react-router-dom";
 import { Button } from "@/src/components/ui/button";
-import { io } from "socket.io-client";
-
-const socket = io();
+import { collection, getDocs, query, where, doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { db, auth } from "@/src/firebase";
 
 interface OrderItem {
   productId: string;
@@ -44,47 +43,76 @@ export default function UserDashboard() {
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    fetchOrders();
+    const userId = auth.currentUser?.uid;
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
 
-    socket.on("orderStatusUpdated", (data: { orderId: string, status: string }) => {
-      setOrders(prevOrders => prevOrders.map(order => 
-        order.id === data.orderId ? { ...order, status: data.status } : order
-      ));
+    const q = query(collection(db, "orders"), where("userId", "==", userId));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      try {
+        const ordersData = await Promise.all(snapshot.docs.map(async (orderDoc) => {
+          const orderData = orderDoc.data() as Omit<Order, 'id'>;
+          
+          const itemsWithProducts = await Promise.all(orderData.items.map(async (item) => {
+            try {
+              const productDoc = await getDoc(doc(db, "products", item.productId));
+              if (productDoc.exists()) {
+                const pData = productDoc.data();
+                return { ...item, product: { name: pData.name, price: pData.price, image: pData.image } };
+              }
+            } catch (e) {
+              console.error("Error fetching product for order item", e);
+            }
+            return item;
+          }));
+
+          return {
+            id: orderDoc.id,
+            ...orderData,
+            items: itemsWithProducts
+          };
+        }));
+        
+        ordersData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        setOrders(ordersData);
+      } catch (error) {
+        console.error("Error processing orders:", error);
+      } finally {
+        setLoading(false);
+      }
     });
 
-    return () => {
-      socket.off("orderStatusUpdated");
-    };
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
     if (activeTab === "favorites") {
-      fetch("/api/products")
-        .then(res => res.json())
-        .then(data => {
-          setFavoriteProducts(data.filter((p: Product) => favorites.includes(p.id)));
-        });
+      const fetchFavorites = async () => {
+        if (favorites.length === 0) {
+          setFavoriteProducts([]);
+          return;
+        }
+        try {
+          const productsRef = collection(db, "products");
+          const snapshot = await getDocs(productsRef);
+          const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+          setFavoriteProducts(allProducts.filter(p => favorites.includes(p.id)));
+        } catch (error) {
+          console.error("Error fetching favorite products:", error);
+        }
+      };
+      fetchFavorites();
     }
   }, [activeTab, favorites]);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await fetch("/api/my-orders");
-      const data = await res.json();
-      setOrders(data);
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handlePayment = async (orderId: string) => {
     setPayingOrder(orderId);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      const res = await fetch(`/api/orders/${orderId}/pay`, { method: "POST" });
-      if (res.ok) fetchOrders();
+      const orderRef = doc(db, "orders", orderId);
+      await updateDoc(orderRef, { status: "paid" });
     } catch (error) {
       console.error("Payment error:", error);
     } finally {
@@ -115,33 +143,33 @@ export default function UserDashboard() {
         {/* Sidebar / Mobile Top Section */}
         <div className="md:col-span-1 space-y-4">
           {/* Profile Card */}
-          <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm flex items-center md:flex-col md:text-center gap-4 md:gap-0 border border-zinc-100">
-            <div className="w-14 h-14 md:w-20 md:h-20 bg-orange-100 rounded-full flex items-center justify-center text-orange-500 font-bold text-xl md:text-2xl md:mb-4 shrink-0">
+          <div className="bg-zinc-900 text-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm flex items-center md:flex-col md:text-center gap-4 md:gap-0">
+            <div className="w-14 h-14 md:w-20 md:h-20 bg-brand-orange text-white rounded-full flex items-center justify-center font-black text-xl md:text-2xl md:mb-4 shrink-0">
               ИИ
             </div>
             <div className="flex-1 md:w-full min-w-0">
-              <h2 className="font-bold text-lg leading-tight md:mb-1 truncate">Иван Иванов</h2>
-              <p className="text-zinc-500 text-sm mb-1 md:mb-4 truncate">+7 (999) 123-45-67</p>
-              <button className="text-orange-600 text-xs md:text-sm font-medium bg-orange-50 hover:bg-orange-100 px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-colors md:w-full truncate">
+              <h2 className="font-black text-lg md:text-xl leading-tight md:mb-1 truncate uppercase tracking-tight">Иван Иванов</h2>
+              <p className="text-zinc-400 text-sm mb-1 md:mb-4 truncate font-medium">+7 (999) 123-45-67</p>
+              <button className="text-white text-xs md:text-sm font-bold bg-brand-orange hover:bg-brand-orange-light px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-colors md:w-full truncate uppercase tracking-tight">
                 Редактировать
               </button>
             </div>
-            <button className="md:hidden p-2.5 text-zinc-400 hover:text-zinc-900 bg-zinc-50 rounded-xl shrink-0">
+            <button className="md:hidden p-2.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-xl shrink-0">
               <LogOut className="w-5 h-5" />
             </button>
           </div>
           
           {/* Desktop Menu */}
           <div className="bg-white rounded-3xl shadow-sm overflow-hidden hidden md:block border border-zinc-100">
-            <button onClick={() => setActiveTab("orders")} className={`w-full flex items-center justify-between p-4 font-medium transition-colors ${activeTab === "orders" ? "bg-orange-50 text-orange-600 border-l-4 border-orange-500" : "text-zinc-600 hover:bg-zinc-50"}`}>
+            <button onClick={() => setActiveTab("orders")} className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${activeTab === "orders" ? "bg-brand-gray text-zinc-900 border-l-4 border-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
               <div className="flex items-center gap-3"><Package className="w-5 h-5" /> Мои заказы</div>
               <ChevronRight className="w-4 h-4" />
             </button>
-            <button onClick={() => setActiveTab("favorites")} className={`w-full flex items-center justify-between p-4 font-medium transition-colors ${activeTab === "favorites" ? "bg-orange-50 text-orange-600 border-l-4 border-orange-500" : "text-zinc-600 hover:bg-zinc-50"}`}>
+            <button onClick={() => setActiveTab("favorites")} className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${activeTab === "favorites" ? "bg-brand-gray text-zinc-900 border-l-4 border-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
               <div className="flex items-center gap-3"><Heart className="w-5 h-5" /> Избранное</div>
               <ChevronRight className="w-4 h-4" />
             </button>
-            <button onClick={() => setActiveTab("addresses")} className={`w-full flex items-center justify-between p-4 font-medium transition-colors ${activeTab === "addresses" ? "bg-orange-50 text-orange-600 border-l-4 border-orange-500" : "text-zinc-600 hover:bg-zinc-50"}`}>
+            <button onClick={() => setActiveTab("addresses")} className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${activeTab === "addresses" ? "bg-brand-gray text-zinc-900 border-l-4 border-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
               <div className="flex items-center gap-3"><MapPin className="w-5 h-5" /> Адреса доставки</div>
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -149,14 +177,14 @@ export default function UserDashboard() {
 
           {/* Mobile Menu (Segmented Control) */}
           <div className="grid grid-cols-3 gap-1 bg-zinc-100 p-1 rounded-xl md:hidden mb-4">
-            <button onClick={() => setActiveTab("orders")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-medium transition-all min-w-0 ${activeTab === "orders" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
-              <Package className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center">Заказы</span>
+            <button onClick={() => setActiveTab("orders")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-bold transition-all min-w-0 ${activeTab === "orders" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+              <Package className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center uppercase tracking-tight">Заказы</span>
             </button>
-            <button onClick={() => setActiveTab("favorites")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-medium transition-all min-w-0 ${activeTab === "favorites" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
-              <Heart className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center">Избранное</span>
+            <button onClick={() => setActiveTab("favorites")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-bold transition-all min-w-0 ${activeTab === "favorites" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+              <Heart className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center uppercase tracking-tight">Избранное</span>
             </button>
-            <button onClick={() => setActiveTab("addresses")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-medium transition-all min-w-0 ${activeTab === "addresses" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
-              <MapPin className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center">Адреса</span>
+            <button onClick={() => setActiveTab("addresses")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-bold transition-all min-w-0 ${activeTab === "addresses" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+              <MapPin className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center uppercase tracking-tight">Адреса</span>
             </button>
           </div>
         </div>
@@ -228,7 +256,7 @@ export default function UserDashboard() {
                           <button 
                             onClick={() => handlePayment(order.id)}
                             disabled={payingOrder === order.id}
-                            className="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2.5 md:py-3 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 disabled:opacity-70 shadow-sm shadow-orange-500/20"
+                            className="bg-zinc-900 hover:bg-zinc-800 text-white px-6 py-2.5 md:py-3 rounded-xl text-sm font-bold transition-colors flex items-center gap-2 disabled:opacity-70 uppercase tracking-tight"
                           >
                             {payingOrder === order.id ? (
                               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -260,53 +288,68 @@ export default function UserDashboard() {
                     const oldPrice = Math.floor(product.price * 1.3);
 
                     return (
-                      <div key={product.id} className="bg-white rounded-2xl md:rounded-3xl p-2 md:p-3 flex flex-col hover:shadow-xl hover:shadow-zinc-200/50 transition-all border border-zinc-100 group relative">
-                        <button 
-                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }}
-                          className="absolute top-3 right-3 z-10 w-8 h-8 md:w-10 md:h-10 bg-white/90 backdrop-blur rounded-full flex items-center justify-center shadow-sm text-zinc-400 hover:text-red-500 transition-colors"
-                        >
-                          <Heart className="w-4 h-4 md:w-5 md:h-5 fill-red-500 text-red-500" />
-                        </button>
-                        
-                        <Link to={`/product/${product.id}`} className="block relative aspect-[4/5] mb-2 md:mb-3 rounded-xl md:rounded-2xl overflow-hidden bg-zinc-100">
-                          <img 
-                            src={product.image} 
-                            alt={product.name} 
-                            className="w-full h-full object-cover mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
-                          />
-                        </Link>
-                        
-                        <div className="flex-1 flex flex-col">
-                          <Link to={`/product/${product.id}`} className="block">
-                            <div className="flex items-baseline gap-1.5 md:gap-2 mb-0.5 md:mb-1">
-                              <span className="text-base md:text-xl font-black text-zinc-900 tracking-tight">{product.price} ₽</span>
-                              <span className="text-[10px] md:text-xs text-zinc-400 line-through font-medium">{oldPrice} ₽</span>
-                            </div>
-                            
-                            <h3 className="text-[10px] md:text-xs text-zinc-900 font-medium line-clamp-2 mb-2 md:mb-3 flex-1 leading-tight md:leading-relaxed hover:text-orange-500 transition-colors">
-                              {product.name}
-                            </h3>
+                      <div key={product.id} className="flex flex-col group relative">
+                        <div className="relative aspect-[4/5] mb-2 rounded-2xl overflow-hidden bg-zinc-100">
+                          <button 
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(product.id); }}
+                            className="absolute top-2 right-2 z-10 w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-red-500 transition-colors bg-white/50 backdrop-blur-sm rounded-full"
+                          >
+                            <Heart className="w-5 h-5 fill-red-500 text-red-500" />
+                          </button>
+                          
+                          <Link to={`/product/${product.id}`} className="block w-full h-full">
+                            <img 
+                              src={product.image} 
+                              alt={product.name} 
+                              className="w-full h-full object-cover mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
+                            />
                           </Link>
 
-                          {inCart ? (
-                            <div className="flex items-center justify-between bg-zinc-100 rounded-lg md:rounded-xl p-1 mt-auto">
-                              <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-md md:rounded-lg hover:bg-white text-zinc-600" onClick={() => updateQuantity(product.id, -1)}>
-                                <Minus className="w-3 h-3 md:w-4 md:h-4" />
-                              </Button>
-                              <span className="text-xs md:text-sm font-bold w-6 md:w-8 text-center">{inCart.quantity}</span>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 md:h-8 md:w-8 rounded-md md:rounded-lg hover:bg-white text-zinc-600" onClick={() => updateQuantity(product.id, 1)}>
-                                <Plus className="w-3 h-3 md:w-4 md:h-4" />
-                              </Button>
+                          <div className="absolute bottom-2 left-2 bg-gradient-to-r from-pink-500 to-purple-500 text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
+                            -23%
+                          </div>
+
+                          <div className="absolute bottom-2 right-2">
+                            {inCart ? (
+                              <div className="flex items-center bg-brand-purple text-white rounded-full h-8 px-1 shadow-lg">
+                                <button className="w-6 h-full flex items-center justify-center" onClick={() => updateQuantity(product.id, -1)}>
+                                  <Minus className="w-3 h-3" />
+                                </button>
+                                <span className="text-xs font-bold w-4 text-center">{inCart.quantity}</span>
+                                <button className="w-6 h-full flex items-center justify-center" onClick={() => updateQuantity(product.id, 1)}>
+                                  <Plus className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                className="w-8 h-8 bg-brand-purple hover:bg-brand-purple-light text-white rounded-full flex items-center justify-center shadow-lg transition-colors"
+                                onClick={() => addToCart(product)}
+                                disabled={product.stock === 0}
+                              >
+                                <ShoppingCart className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <div className="flex-1 flex flex-col px-1">
+                          <Link to={`/product/${product.id}`} className="block">
+                            <div className="flex items-baseline gap-2 mb-1">
+                              <span className="text-base md:text-lg font-bold text-brand-purple">{product.price} ₽</span>
+                              <span className="text-[10px] md:text-xs text-zinc-400 line-through">{oldPrice} ₽</span>
                             </div>
-                          ) : (
-                            <Button 
-                              className="w-full bg-orange-500 hover:bg-orange-600 text-white rounded-lg md:rounded-xl h-8 md:h-10 mt-auto font-semibold text-xs md:text-sm shadow-sm shadow-orange-200"
-                              onClick={() => addToCart(product)}
-                              disabled={product.stock === 0}
-                            >
-                              {product.stock === 0 ? "Нет в наличии" : "В корзину"}
-                            </Button>
-                          )}
+                            
+                            <h3 className="text-[11px] md:text-xs text-zinc-800 line-clamp-2 mb-1 leading-snug">
+                              <span className="font-bold mr-1">{product.category}</span>
+                              {product.name}
+                            </h3>
+
+                            <div className="flex items-center gap-1 text-[10px] md:text-xs text-zinc-500">
+                              <Star className="w-3 h-3 fill-orange-400 text-orange-400" />
+                              <span className="font-medium">4.9</span>
+                              <span>· 120 оценок</span>
+                            </div>
+                          </Link>
                         </div>
                       </div>
                     );

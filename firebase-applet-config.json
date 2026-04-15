@@ -1,9 +1,10 @@
 {
-  "apiKey": "AIzaSyD9efvoJvqBgG-Ld1a5HJj0aShZWyLSNRA",
-  "authDomain": "brusher-65bf4.firebaseapp.com",
-  "projectId": "brusher-65bf4",
-  "storageBucket": "brusher-65bf4.firebasestorage.app",
-  "messagingSenderId": "191612911607",
-  "appId": "1:191612911607:web:2da14d4e63bb55b0e878f2",
-  "measurementId": "G-GZYPKLNGKP"
+  "projectId": "gen-lang-client-0349670787",
+  "appId": "1:1016864479257:web:408fa713d07bf6182fb288",
+  "apiKey": "AIzaSyDalD2rGf88rcEEABtYW1H1ucKVVULpsUk",
+  "authDomain": "gen-lang-client-0349670787.firebaseapp.com",
+  "firestoreDatabaseId": "ai-studio-804d9f51-b5e2-4cfd-978c-2f181be08c2e",
+  "storageBucket": "gen-lang-client-0349670787.firebasestorage.app",
+  "messagingSenderId": "1016864479257",
+  "measurementId": ""
 }

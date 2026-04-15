@@ -9,12 +9,14 @@ import { ProductDetails } from "./pages/ProductDetails";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import UserDashboard from "./pages/UserDashboard";
 import { AdminRoute } from "./components/AdminRoute";
-import { ShoppingCart, LayoutDashboard, Palette, Search, User, Menu, Settings } from "lucide-react";
+import { ShoppingCart, LayoutDashboard, Palette, Search, User, Menu, Settings, ShoppingBag, Heart, MapPin, Package, Home, ChevronDown, Briefcase, Phone, BarChart2, Percent } from "lucide-react";
 import { CartProvider, useCart } from "./lib/cart-context";
 import { useAuth } from "./lib/auth-context";
 import { Input } from "./components/ui/input";
 import { Button } from "./components/ui/button";
 import { SearchBar } from "./components/SearchBar";
+import { seedDatabase } from "./lib/seed-data";
+import { useEffect, useState, useRef } from "react";
 
 function AppContent() {
   const { cartCount } = useCart();
@@ -23,81 +25,184 @@ function AppContent() {
   const isMobileCartOrCheckout = location.pathname === '/cart' || location.pathname === '/checkout';
   const isAdmin = user?.email === 'kancloft@gmail.com';
   
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+        setIsHeaderHidden(true);
+      } else if (currentScrollY < lastScrollY.current) {
+        setIsHeaderHidden(false);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (isAdmin) {
+      seedDatabase();
+    }
+  }, [isAdmin]);
+  
   return (
-    <div className="min-h-screen bg-zinc-100 flex flex-col font-sans pb-14 md:pb-0">
-      <header className="hidden md:block sticky top-0 z-50 w-full bg-white border-b border-zinc-200 shadow-sm">
-        {/* Top bar */}
-        <div className="bg-zinc-100 text-zinc-500 text-[11px] py-1.5 hidden sm:block">
-          <div className="container mx-auto px-4 flex justify-between items-center">
-            <div className="flex gap-4">
-              <span className="hover:text-zinc-900 cursor-pointer">Москва</span>
-              <span className="hover:text-zinc-900 cursor-pointer">Бесплатная доставка от 2000 ₽</span>
+    <div className="min-h-screen bg-white flex flex-col font-sans pb-14 md:pb-0">
+      {/* Desktop Header - Top Bar */}
+      <div className="hidden md:block bg-white text-zinc-600 text-[13px] py-1.5 border-b border-brand-border h-[44px]">
+        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-8">
+          <div className="flex gap-5 items-center">
+            <span className="hover:text-brand-red cursor-pointer transition-colors flex items-center gap-1 font-medium text-zinc-900">
+              <MapPin className="w-3.5 h-3.5 text-zinc-400" /> Тамбов
+            </span>
+            <span className="hover:text-brand-red cursor-pointer transition-colors flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-zinc-400" /> 5 магазинов
+            </span>
+          </div>
+          <div className="flex gap-6 items-center">
+            <div className="flex items-center gap-1 hover:text-brand-red cursor-pointer transition-colors">
+              Получение и оплата <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
             </div>
-            <div className="flex gap-4">
-              <span className="hover:text-zinc-900 cursor-pointer">Продавайте на ArtStore</span>
-              <span className="hover:text-zinc-900 cursor-pointer">Помощь</span>
-              {user ? (
-                <button onClick={signOutUser} className="hover:text-zinc-900 cursor-pointer">Выйти</button>
-              ) : (
-                <button onClick={signInWithGoogle} className="hover:text-zinc-900 cursor-pointer">Войти</button>
-              )}
+            <span className="hover:text-brand-red cursor-pointer transition-colors">Сервис и поддержка</span>
+            <div className="flex items-center gap-1 hover:text-brand-red cursor-pointer transition-colors">
+              О нас <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
             </div>
+            <span className="hover:text-brand-red cursor-pointer transition-colors">Инвесторам</span>
+            <span className="text-zinc-900 font-bold hover:text-brand-red cursor-pointer transition-colors flex items-center gap-1">
+              <Phone className="w-3.5 h-3.5 text-zinc-400" /> 8 800 550-37-71
+            </span>
           </div>
         </div>
-        
-        {/* Main header */}
-        <div className="container mx-auto px-4 h-20 flex items-center gap-4 md:gap-8">
-          <Link to="/" className="flex items-center gap-2 font-black text-xl md:text-2xl text-orange-500 tracking-tight shrink-0">
-            <img src="/logo.png" alt="Logo" className="w-8 h-8" />
-            <span className="hidden sm:inline-block">БRАШЭС ЭНД СИСТЭRС</span>
+      </div>
+      
+      {/* Desktop Header - Main (Sticky) */}
+      <header className="hidden md:block sticky top-0 z-50 bg-white border-b border-brand-border shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 h-[90px] flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-2 shrink-0">
+            <div className="bg-brand-red text-white p-1 rounded-lg flex items-center justify-center overflow-hidden">
+              <img 
+                src="https://picsum.photos/seed/art-logo/200/200" 
+                alt="Art Logo" 
+                className="w-16 h-16 object-contain invert"
+                referrerPolicy="no-referrer"
+              />
+            </div>
           </Link>
           
-          <Button className="bg-orange-500 hover:bg-orange-600 text-white gap-2 hidden md:flex shrink-0 rounded-xl h-12 px-6 font-semibold text-base">
-            <Menu className="w-6 h-6" />
+          <Button className="bg-zinc-600 hover:bg-zinc-700 text-white gap-2 hidden md:flex shrink-0 rounded-md h-11 px-6 font-bold text-base transition-colors shadow-none" onClick={() => window.location.href = '/catalog'}>
+            <Menu className="w-5 h-5" />
             Каталог
           </Button>
 
           <SearchBar className="max-w-6xl flex-[2]" />
 
-          <nav className="flex items-center gap-2 sm:gap-6 shrink-0 ml-auto">
-            {isAdmin && (
-              <Link to="/admin" className="flex flex-col items-center gap-1 text-zinc-500 hover:text-orange-500 transition-colors">
-                <Settings className="w-6 h-6" />
-                <span className="text-[11px] font-medium hidden sm:block">Админ</span>
-              </Link>
-            )}
-            <button 
-              onClick={() => user ? window.location.href = '/account' : signInWithGoogle()}
-              className="flex flex-col items-center gap-1 text-zinc-500 hover:text-orange-500 transition-colors hidden sm:flex"
-            >
-              <User className="w-6 h-6" />
-              <span className="text-[11px] font-medium">Кабинет</span>
-            </button>
-            <Link to="/cart" className="flex flex-col items-center gap-1 text-zinc-500 hover:text-orange-500 transition-colors relative">
+          <nav className="flex items-center gap-6 shrink-0 ml-auto">
+            <Link to="/account?tab=favorites" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors relative hidden sm:flex">
+              <Heart className="w-6 h-6" />
+              <span className="text-[11px] font-medium">Избранное</span>
+            </Link>
+            <Link to="/compare" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors relative hidden sm:flex">
+              <BarChart2 className="w-6 h-6" />
+              <span className="text-[11px] font-medium">Сравнение</span>
+            </Link>
+            <Link to="/account?tab=orders" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors hidden sm:flex">
+              <Package className="w-6 h-6" />
+              <span className="text-[11px] font-medium">Заказы</span>
+            </Link>
+            <Link to="/cart" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors relative">
               <div className="relative">
                 <ShoppingCart className="w-6 h-6" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-2 bg-orange-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white box-content">
+                  <span className="absolute -top-2 -right-2 bg-brand-yellow text-zinc-900 text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                     {cartCount}
                   </span>
                 )}
               </div>
               <span className="text-[11px] font-medium hidden sm:block">Корзина</span>
             </Link>
+            <button 
+              onClick={() => user ? window.location.href = '/account' : signInWithGoogle()}
+              className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-6 py-2.5 rounded-md font-bold text-sm transition-colors ml-2"
+            >
+              Войти
+            </button>
           </nav>
         </div>
       </header>
 
-      {/* Mobile Header (Search only) */}
-      {!isMobileCartOrCheckout && (
-        <header className="md:hidden sticky top-0 z-40 w-full bg-white border-b border-zinc-200 px-3 py-2 flex gap-2 items-center shadow-sm">
-          <SearchBar />
-        </header>
-      )}
+      {/* Desktop Header - Sub-header (Categories) */}
+      <div className="hidden md:block border-b border-brand-border bg-white">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-12 text-[13px] font-medium">
+          <div className="flex items-center gap-6 overflow-x-auto no-scrollbar">
+            <Link to="/promos" className="text-brand-red flex items-center gap-1 shrink-0"><Percent className="w-4 h-4" /> Акции</Link>
+            <Link to="/category/Инструмент" className="hover:text-brand-red transition-colors shrink-0">Инструмент</Link>
+            <Link to="/category/Крепеж" className="hover:text-brand-red transition-colors shrink-0">Крепеж</Link>
+            <Link to="/category/Всё для сада" className="hover:text-brand-red transition-colors shrink-0">Всё для сада</Link>
+            <Link to="/category/Электрика" className="hover:text-brand-red transition-colors shrink-0">Электрика</Link>
+            <Link to="/category/Силовая техника" className="hover:text-brand-red transition-colors shrink-0">Силовая техника</Link>
+            <Link to="/category/Станки" className="hover:text-brand-red transition-colors shrink-0">Станки</Link>
+            <Link to="/category/Спецодежда и СИЗ" className="hover:text-brand-red transition-colors shrink-0">Спецодежда и СИЗ</Link>
+            <Link to="/category/Сантехника" className="hover:text-brand-red transition-colors shrink-0">Сантехника</Link>
+            <Link to="/category/Авто" className="hover:text-brand-red transition-colors shrink-0">Авто</Link>
+          </div>
+          <Button variant="outline" size="sm" className="h-8 px-3 bg-brand-gray border-none text-zinc-900 font-bold text-[12px] rounded-md flex items-center gap-2">
+            <Briefcase className="w-4 h-4" /> Для юрлиц
+          </Button>
+        </div>
+      </div>
 
-      <main className="flex-1 w-full max-w-7xl mx-auto md:px-4 md:py-6">
+      {/* Mobile Header */}
+      <div 
+        className={`md:hidden fixed top-0 left-0 right-0 z-40 bg-white border-b border-brand-border shadow-sm transition-transform duration-300 ${
+          isHeaderHidden ? '-translate-y-[52px]' : 'translate-y-0'
+        }`}
+      >
+        {/* Top Row: h-[52px] */}
+        <div className="w-full px-4 pt-3 pb-2 flex items-center justify-between gap-2 h-[52px]">
+          <div className="flex items-center gap-2 shrink-0">
+            <Link to="/" className="bg-brand-red text-white p-1 rounded flex items-center justify-center shrink-0 overflow-hidden">
+              <img 
+                src="https://picsum.photos/seed/art-logo/200/200" 
+                alt="Logo" 
+                className="w-6 h-6 object-contain invert"
+                referrerPolicy="no-referrer"
+              />
+            </Link>
+            <div className="flex items-center gap-1 text-sm font-medium text-zinc-900 cursor-pointer">
+              Тамбов <ChevronDown className="w-4 h-4 text-zinc-500" />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 ml-auto">
+            <Button variant="outline" size="sm" className="h-8 px-2.5 bg-brand-gray border-none text-zinc-900 font-medium text-[11px] rounded-md">
+              <Briefcase className="w-3.5 h-3.5 mr-1.5" /> Для юрлиц
+            </Button>
+            <Button variant="outline" size="icon" className="h-8 w-8 bg-brand-gray border-none text-zinc-900 rounded-md shrink-0">
+              <Phone className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Search Bar: h-[56px] */}
+        <div className="w-full px-4 pb-3 pt-1 h-[56px]">
+          <div className="relative w-full">
+            <input 
+              type="text" 
+              placeholder="Всё для творчества и хобби" 
+              className="w-full bg-brand-gray border-none rounded-md pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-red outline-none"
+            />
+            <Search className="w-5 h-5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          </div>
+        </div>
+      </div>
+
+      <main className="flex-1 w-full max-w-7xl mx-auto pt-[108px] md:pt-0 md:px-4 md:py-6">
         <Routes>
-          <Route path="/" element={<Storefront />} />
+          <Route path="/" element={<Storefront view="home" />} />
+          <Route path="/catalog" element={<Storefront view="catalog_list" />} />
+          <Route path="/category/:name" element={<Storefront view="category_products" />} />
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Storefront view="cart" />} />
           <Route path="/checkout" element={<Storefront view="checkout" />} />
@@ -107,40 +212,51 @@ function AppContent() {
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-zinc-200 flex justify-around items-center h-14 z-50 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.05)]">
-        <Link to="/" className={`flex flex-col items-center justify-center w-full h-full ${location.pathname === '/' ? 'text-orange-500' : 'text-zinc-500'}`}>
-          <Palette className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-medium">Главная</span>
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-brand-border flex justify-between items-end h-[60px] z-50 pb-safe shadow-[0_-4px_10px_rgba(0,0,0,0.02)] px-2">
+        <Link to="/" className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname === '/' ? 'text-zinc-900' : 'text-zinc-400'}`}>
+          <div className="flex flex-col items-center justify-center h-full pt-1">
+            <Home className="w-6 h-6 mb-1" strokeWidth={location.pathname === '/' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Главная</span>
+          </div>
         </Link>
-        <Link to="/cart" className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname === '/cart' ? 'text-orange-500' : 'text-zinc-500'}`}>
-          <div className="relative">
-            <ShoppingCart className="w-5 h-5 mb-0.5" />
+        <Link to="/catalog" className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname === '/catalog' ? 'text-zinc-900' : 'text-zinc-400'}`}>
+          <div className="flex flex-col items-center justify-center h-full pt-1">
+            <Search className="w-6 h-6 mb-1" strokeWidth={location.pathname === '/catalog' ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Каталог</span>
+          </div>
+        </Link>
+        <Link to="/cart" className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname === '/cart' ? 'text-zinc-900' : 'text-zinc-400'}`}>
+          <div className="flex flex-col items-center justify-center h-full pt-1 relative">
+            <ShoppingCart className="w-6 h-6 mb-1" strokeWidth={location.pathname === '/cart' ? 2.5 : 2} />
             {cartCount > 0 && (
-              <span className="absolute -top-1 -right-2 bg-orange-500 text-white text-[9px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center border border-white box-content">
+              <span className={`absolute top-0 right-0 text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border-2 border-white box-content bg-brand-red text-white`}>
                 {cartCount}
               </span>
             )}
+            <span className="text-[10px] font-medium">Корзина</span>
           </div>
-          <span className="text-[10px] font-medium">Корзина</span>
+        </Link>
+        <Link to="/account?tab=favorites" className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname === '/account' && location.search.includes('favorites') ? 'text-zinc-900' : 'text-zinc-400'}`}>
+          <div className="flex flex-col items-center justify-center h-full pt-1">
+            <Heart className="w-6 h-6 mb-1" strokeWidth={location.pathname === '/account' && location.search.includes('favorites') ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Избранное</span>
+          </div>
         </Link>
         <button 
           onClick={() => user ? window.location.href = '/account' : signInWithGoogle()}
-          className={`flex flex-col items-center justify-center w-full h-full ${location.pathname.startsWith('/account') ? 'text-orange-500' : 'text-zinc-500'}`}
+          className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname.startsWith('/account') && !location.search.includes('favorites') ? 'text-zinc-900' : 'text-zinc-400'}`}
         >
-          <User className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-medium">Кабинет</span>
+          <div className="flex flex-col items-center justify-center h-full pt-1">
+            <User className="w-6 h-6 mb-1" strokeWidth={location.pathname.startsWith('/account') && !location.search.includes('favorites') ? 2.5 : 2} />
+            <span className="text-[10px] font-medium">Профиль</span>
+          </div>
         </button>
-        {isAdmin && (
-          <Link to="/admin" className={`flex flex-col items-center justify-center w-full h-full ${location.pathname.startsWith('/admin') ? 'text-orange-500' : 'text-zinc-500'}`}>
-            <Settings className="w-5 h-5 mb-0.5" />
-            <span className="text-[10px] font-medium">Админ</span>
-          </Link>
-        )}
       </nav>
 
-      <footer className="hidden md:block bg-white py-8 mt-auto border-t border-zinc-200">
-        <div className="container mx-auto px-4 text-center text-sm text-zinc-500">
-          &copy; {new Date().getFullYear()} ArtStore. Все права защищены.
+      <footer className="hidden md:block bg-zinc-900 text-white py-12 mt-auto">
+        <div className="container mx-auto px-4 text-center text-sm text-zinc-400">
+          <div className="font-black text-2xl tracking-tighter text-white mb-4">АртИнструмент</div>
+          &copy; {new Date().getFullYear()} АртИнструмент. Все права защищены.
         </div>
       </footer>
     </div>

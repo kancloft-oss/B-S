@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "@/src/firebase";
 
 export function SearchBar({ className }: { className?: string }) {
   const [query, setQuery] = useState("");
@@ -31,9 +33,17 @@ export function SearchBar({ className }: { className?: string }) {
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-        const data = await response.json();
-        setResults(data);
+        const snapshot = await getDocs(collection(db, "products"));
+        const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+        
+        const lowerQuery = query.toLowerCase();
+        const filtered = allProducts.filter(p => 
+          p.name.toLowerCase().includes(lowerQuery) || 
+          (p.description && p.description.toLowerCase().includes(lowerQuery)) ||
+          p.category.toLowerCase().includes(lowerQuery)
+        );
+        
+        setResults(filtered);
         setIsOpen(true);
       } catch (error) {
         console.error("Search error:", error);
@@ -53,18 +63,23 @@ export function SearchBar({ className }: { className?: string }) {
 
   return (
     <div className={`flex-1 relative ${className || "max-w-4xl"}`} ref={wrapperRef}>
-      <Input
-        placeholder="Искать товары..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        className="w-full rounded-2xl bg-zinc-100 border-transparent focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:bg-white pl-5 pr-12 h-12 text-base shadow-none"
-      />
-      <div className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400">
-        {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Search className="w-6 h-6" />}
+      <div className="relative flex items-center w-full group">
+        <div className="relative flex-1">
+          <Input
+            placeholder="Оригинальные товары для творчества и художников"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-l-md border-2 border-zinc-600 border-r-0 bg-white focus-visible:ring-0 pl-4 pr-4 h-11 text-base shadow-none text-zinc-900 placeholder:text-zinc-500 transition-colors"
+          />
+          {isLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-zinc-400" />}
+        </div>
+        <button className="bg-zinc-600 hover:bg-zinc-700 text-white h-11 px-5 rounded-r-md transition-colors flex items-center justify-center">
+          <Search className="w-6 h-6" />
+        </button>
       </div>
 
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-zinc-200 z-50 overflow-hidden">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-md shadow-xl border border-zinc-200 z-50 overflow-hidden">
           {results.map((product) => (
             <button
               key={product.id}
