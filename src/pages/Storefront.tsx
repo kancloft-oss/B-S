@@ -17,6 +17,8 @@ const CATEGORIES_DATA = [
   { name: "Аксессуары", icon: Wrench, image: "https://picsum.photos/seed/accessories/100/100" },
   { name: "Инструменты", icon: Hammer, image: "https://picsum.photos/seed/tools/100/100" },
   { name: "Вспомогательные", icon: Droplet, image: "https://picsum.photos/seed/auxiliary/100/100" },
+  { name: "Мулине и нитки", icon: Palette, image: "https://picsum.photos/seed/threads/100/100" },
+  { name: "Товары для хобби", icon: Heart, image: "https://picsum.photos/seed/hobby/100/100" },
 ];
 
 const SORT_OPTIONS = [

@@ -1114,6 +1114,49 @@ function Import1CView() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    totalCategories: 0,
+    newProducts: 0,
+    lastUpdate: 'Нет данных'
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const productsSnap = await getDocs(collection(db, "products"));
+      const categoriesSnap = await getDocs(collection(db, "categories"));
+      
+      const now = new Date();
+      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      let newCount = 0;
+      let latestUpdate = null;
+
+      productsSnap.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.createdAt) {
+          const created = new Date(data.createdAt);
+          if (created > sevenDaysAgo) newCount++;
+          if (!latestUpdate || created > new Date(latestUpdate)) {
+            latestUpdate = data.createdAt;
+          }
+        }
+      });
+
+      setStats({
+        totalProducts: productsSnap.size,
+        totalCategories: categoriesSnap.size,
+        newProducts: newCount,
+        lastUpdate: latestUpdate ? new Date(latestUpdate).toLocaleString('ru-RU') : 'Нет данных'
+      });
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -1174,6 +1217,7 @@ function Import1CView() {
           code: String(row['Код'] || ''),
           category: category,
           description: row['Описание'] || '',
+          updatedAt: new Date().toISOString()
         };
 
         const existingId = existingProductsMap.get(sku);
@@ -1184,6 +1228,7 @@ function Import1CView() {
           const docRef = doc(collection(db, "products"));
           currentBatch.set(docRef, {
             ...productData,
+            createdAt: new Date().toISOString(),
             image: 'https://picsum.photos/seed/' + sku + '/400/400',
             salesCount: 0
           });
@@ -1234,6 +1279,7 @@ function Import1CView() {
 
       addLog("Синхронизация успешно завершена!");
       setProgress(100);
+      fetchStats(); // Refresh stats after import
     } catch (error) {
       addLog(`Ошибка: ${error instanceof Error ? error.message : String(error)}`);
       console.error(error);
@@ -1383,11 +1429,19 @@ function Import1CView() {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
                 <span className="text-xs text-zinc-500 font-medium">Всего товаров</span>
-                <span className="font-bold text-zinc-900">~6 800</span>
+                <span className="font-bold text-zinc-900">{stats.totalProducts.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
+                <span className="text-xs text-zinc-500 font-medium">Групп товаров</span>
+                <span className="font-bold text-zinc-900">{stats.totalCategories}</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
+                <span className="text-xs text-zinc-500 font-medium">Новинок (7дн)</span>
+                <span className="font-bold text-emerald-600">+{stats.newProducts}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
                 <span className="text-xs text-zinc-500 font-medium">Последнее обновление</span>
-                <span className="font-bold text-zinc-900">Сегодня, 10:45</span>
+                <span className="font-bold text-zinc-900 text-[10px]">{stats.lastUpdate}</span>
               </div>
             </CardContent>
           </Card>
