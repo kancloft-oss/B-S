@@ -18,7 +18,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area 
 } from 'recharts';
-import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, addDoc, query, where, orderBy, limit, startAfter } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, addDoc, query, where, orderBy, limit, startAfter, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import * as XLSX from 'xlsx';
 
@@ -1130,7 +1130,7 @@ function Import1CView() {
     setLoading(true);
     setLogs([]);
     setProgress(0);
-    addLog("Начало импорта из 1С...");
+    addLog("Начало высокоскоростной синхронизации...");
 
     try {
       const data = await file.arrayBuffer();
@@ -1138,58 +1138,76 @@ function Import1CView() {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
-      addLog(`Найдено товаров в файле: ${jsonData.length}`);
+      addLog(`Файл прочитан. Найдено строк: ${jsonData.length}`);
+      addLog("Загрузка текущей базы для сопоставления (это сэкономит тысячи запросов)...");
 
-      const batchSize = 25; // Increased batch size for 13k items
-      for (let i = 0; i < jsonData.length; i += batchSize) {
-        const batch = jsonData.slice(i, i + batchSize);
-        
-        await Promise.all(batch.map(async (row: any) => {
-          const sku = String(row['Артикул'] || row['Код'] || '');
-          if (!sku) return;
+      // 1. Fetch all existing SKUs to avoid per-item queries (The "Speed Secret")
+      const existingProductsMap = new Map<string, string>(); // SKU -> DocID
+      const snapshot = await getDocs(collection(db, "products"));
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.sku) existingProductsMap.set(String(data.sku), doc.id);
+      });
 
-          const productData = {
-            name: row['Наименование'] || '',
-            fullName: row['Наименование полное'] || '',
-            price: Number(row['Розничная цена ₽']) || 0,
-            stock: Number(row['Остаток']) || 0,
-            unit: row['Ед.изм'] || 'шт',
-            sku: sku,
-            code: String(row['Код'] || ''),
-            category: row['Категория'] || 'Без категории',
-            description: row['Описание'] || '',
-          };
+      addLog(`База загружена (${existingProductsMap.size} товаров). Начинаем пакетную обработку...`);
 
-          try {
-            const q = query(collection(db, "products"), where("sku", "==", sku));
-            const querySnapshot = await getDocs(q);
+      const total = jsonData.length;
+      let processed = 0;
+      let currentBatch = writeBatch(db);
+      let batchCount = 0;
 
-            if (!querySnapshot.empty) {
-              const docId = querySnapshot.docs[0].id;
-              await updateDoc(doc(db, "products", docId), productData);
-            } else {
-              await addDoc(collection(db, "products"), {
-                ...productData,
-                image: 'https://picsum.photos/seed/' + sku + '/400/400',
-                salesCount: 0
-              });
-            }
-          } catch (err) {
-            console.error(`Error processing SKU ${sku}:`, err);
-          }
-        }));
+      for (const row of jsonData) {
+        const sku = String(row['Артикул'] || row['Код'] || '');
+        if (!sku) continue;
 
-        const currentProgress = Math.round(((i + batch.length) / jsonData.length) * 100);
-        setProgress(currentProgress);
-        if (i % 50 === 0) {
-          addLog(`Обработано: ${i + batch.length} из ${jsonData.length}`);
+        const productData = {
+          name: row['Наименование'] || '',
+          fullName: row['Наименование полное'] || '',
+          price: Number(row['Розничная цена ₽']) || 0,
+          stock: Number(row['Остаток']) || 0,
+          unit: row['Ед.изм'] || 'шт',
+          sku: sku,
+          code: String(row['Код'] || ''),
+          category: row['Категория'] || 'Без категории',
+          description: row['Описание'] || '',
+        };
+
+        const existingId = existingProductsMap.get(sku);
+        if (existingId) {
+          const docRef = doc(db, "products", existingId);
+          currentBatch.update(docRef, productData);
+        } else {
+          const docRef = doc(collection(db, "products"));
+          currentBatch.set(docRef, {
+            ...productData,
+            image: 'https://picsum.photos/seed/' + sku + '/400/400',
+            salesCount: 0
+          });
+        }
+
+        batchCount++;
+        processed++;
+
+        // Firestore allows up to 500 operations per batch
+        if (batchCount >= 400) {
+          await currentBatch.commit();
+          currentBatch = writeBatch(db);
+          batchCount = 0;
+          setProgress(Math.round((processed / total) * 100));
+          addLog(`Синхронизировано: ${processed} из ${total}`);
         }
       }
 
-      addLog("Импорт успешно завершен!");
+      // Final batch
+      if (batchCount > 0) {
+        await currentBatch.commit();
+      }
+
+      addLog("Синхронизация успешно завершена!");
       setProgress(100);
     } catch (error) {
-      addLog(`Ошибка импорта: ${error instanceof Error ? error.message : String(error)}`);
+      addLog(`Ошибка: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(error);
     } finally {
       setLoading(false);
     }
