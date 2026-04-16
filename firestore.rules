@@ -129,6 +129,11 @@ service cloud.firestore {
       allow write: if true; // Temporarily allow all writes for 1C import without Google Auth
     }
 
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if true; // Temporarily allow all writes for 1C import
+    }
+
     match /orders/{orderId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && 

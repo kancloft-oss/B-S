@@ -1151,6 +1151,7 @@ function Import1CView() {
 
       addLog(`База загружена (${existingProductsMap.size} товаров). Начинаем пакетную обработку...`);
 
+      const uniqueCategories = new Set<string>();
       const total = jsonData.length;
       let processed = 0;
       let currentBatch = writeBatch(db);
@@ -1160,6 +1161,9 @@ function Import1CView() {
         const sku = String(row['Артикул'] || row['Код'] || '');
         if (!sku) continue;
 
+        const category = row['Категория'] || 'Без категории';
+        uniqueCategories.add(category);
+
         const productData = {
           name: row['Наименование'] || '',
           fullName: row['Наименование полное'] || '',
@@ -1168,7 +1172,7 @@ function Import1CView() {
           unit: row['Ед.изм'] || 'шт',
           sku: sku,
           code: String(row['Код'] || ''),
-          category: row['Категория'] || 'Без категории',
+          category: category,
           description: row['Описание'] || '',
         };
 
@@ -1201,6 +1205,31 @@ function Import1CView() {
       // Final batch
       if (batchCount > 0) {
         await currentBatch.commit();
+      }
+
+      // 2. Update Categories Collection
+      addLog(`Обновление списка групп товаров (${uniqueCategories.size})...`);
+      let catBatch = writeBatch(db);
+      let catCount = 0;
+      
+      for (const categoryName of Array.from(uniqueCategories)) {
+        const catRef = doc(db, "categories", categoryName);
+        catBatch.set(catRef, { 
+          name: categoryName, 
+          slug: categoryName.toLowerCase().replace(/\s+/g, '-'),
+          updatedAt: new Date().toISOString() 
+        }, { merge: true });
+        
+        catCount++;
+        if (catCount >= 400) {
+          await catBatch.commit();
+          catBatch = writeBatch(db);
+          catCount = 0;
+        }
+      }
+      
+      if (catCount > 0) {
+        await catBatch.commit();
       }
 
       addLog("Синхронизация успешно завершена!");

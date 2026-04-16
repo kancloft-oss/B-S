@@ -28,6 +28,7 @@ const SORT_OPTIONS = [
 
 export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" | "category_products" | "cart" | "checkout" }) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<{name: string, icon: any, image: string}[]>([]);
   const { name: categoryParam } = useParams<{ name: string }>();
   const [sortBy, setSortBy] = useState("popular");
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -37,18 +38,34 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchData = async () => {
       try {
-        const querySnapshot = await getDocs(collection(db, "products"));
-        const productsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        // Fetch Products
+        const productsSnapshot = await getDocs(collection(db, "products"));
+        const productsData = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
         setProducts(productsData);
+
+        // Fetch Categories
+        const categoriesSnapshot = await getDocs(collection(db, "categories"));
+        const categoriesData = categoriesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          // Try to match with hardcoded icons if possible
+          const matched = CATEGORIES_DATA.find(c => c.name === data.name);
+          return {
+            name: data.name,
+            icon: matched?.icon || Package,
+            image: matched?.image || `https://picsum.photos/seed/${data.name}/100/100`
+          };
+        });
+        
+        setCategories(categoriesData.length > 0 ? categoriesData : CATEGORIES_DATA);
       } catch (error) {
-        console.error("Error fetching products:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchData();
   }, []);
 
   const filteredProducts = useMemo(() => {
@@ -125,7 +142,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
       <div className="max-w-7xl mx-auto px-4 py-6 pb-24">
         {/* Top Category Grid */}
         <div className="grid grid-rows-2 grid-flow-col gap-3 overflow-x-auto snap-x no-scrollbar pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid-rows-none md:grid-cols-4 lg:grid-cols-8 md:grid-flow-row mb-8 md:mb-10">
-          {CATEGORIES_DATA.slice(0, 8).map((cat) => (
+          {categories.slice(0, 8).map((cat) => (
             <Link 
               key={cat.name}
               to={`/category/${cat.name}`}
@@ -398,7 +415,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         </div>
         
         <div className="flex flex-col">
-          {CATEGORIES_DATA.map((cat) => {
+          {categories.map((cat) => {
             const Icon = cat.icon;
             return (
               <Link 
