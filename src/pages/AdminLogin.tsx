@@ -25,11 +25,19 @@ export function AdminLogin() {
 
   const handleGoogleLogin = async () => {
     try {
+      setError("");
       await signInWithGoogle();
       localStorage.setItem("admin_auth", "true");
       navigate("/admin");
-    } catch (err) {
-      setError("Ошибка входа через Google");
+    } catch (err: any) {
+      console.error("Google Login Error:", err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setError("Этот домен не разрешен в настройках Firebase. Добавьте его в Authorized Domains.");
+      } else if (err.code === 'auth/popup-blocked') {
+        setError("Всплывающее окно заблокировано браузером. Разрешите всплывающие окна.");
+      } else {
+        setError(`Ошибка входа: ${err.message || "Неизвестная ошибка"}`);
+      }
     }
   };
 
