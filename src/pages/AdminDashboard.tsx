@@ -1439,13 +1439,16 @@ function SystemLogsView() {
 
 // --- Main Layout ---
 export function AdminDashboard() {
-  const { user: firebaseUser, signInWithGoogle } = useAuth();
+  const { user: firebaseUser, signInWithGoogle, signOutUser } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
 
+  const isFirebaseAuthorized = firebaseUser?.email === "kancloft@gmail.com";
+
   const handleLogout = () => {
     localStorage.removeItem("admin_auth");
+    signOutUser();
     navigate("/admin/login");
   };
 
@@ -1516,22 +1519,24 @@ export function AdminDashboard() {
           </div>
 
           <div className="flex items-center gap-6">
-            {!firebaseUser && (
+            <div className="flex items-center gap-3 px-4 py-2 bg-zinc-50 rounded-xl border border-zinc-100">
+              <div className={`w-2 h-2 rounded-full animate-pulse ${isFirebaseAuthorized ? 'bg-emerald-500' : 'bg-red-500'}`}></div>
+              <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-wider">
+                {isFirebaseAuthorized ? 'Firebase Authorized' : 'Firebase Unauthorized'}
+              </span>
+            </div>
+
+            {!isFirebaseAuthorized && (
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={signInWithGoogle}
-                className="text-red-500 border-red-200 hover:bg-red-50 gap-2"
+                className="text-red-500 border-red-200 hover:bg-red-50 gap-2 h-10 rounded-xl px-4"
               >
                 <ShieldAlert className="w-4 h-4" />
-                Auth Required for DB
+                {firebaseUser ? 'Change Account' : 'Login to Firebase'}
               </Button>
             )}
-            
-            <div className="flex items-center gap-3 px-4 py-2 bg-zinc-50 rounded-xl border border-zinc-100">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">System Online</span>
-            </div>
             
             <div className="h-10 w-[1px] bg-zinc-200"></div>
 

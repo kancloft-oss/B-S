@@ -87,15 +87,18 @@ service cloud.firestore {
 
     function isValidProduct(data) {
       return hasRequiredFields(['name', 'price', 'stock', 'category', 'image']) &&
-             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 500 &&
              data.price is number && data.price >= 0 &&
              data.stock is number && data.stock >= 0 &&
              data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
              isValidUrl(data.image) &&
-             (!('description' in data) || (data.description is string && data.description.size() < 5000)) &&
-             (!('sku' in data) || (data.sku is string && data.sku.size() < 50)) &&
+             (!('description' in data) || (data.description is string && data.description.size() < 10000)) &&
+             (!('sku' in data) || (data.sku is string && data.sku.size() < 100)) &&
+             (!('code' in data) || (data.code is string && data.code.size() < 100)) &&
+             (!('unit' in data) || (data.unit is string && data.unit.size() < 20)) &&
+             (!('fullName' in data) || (data.fullName is string && data.fullName.size() < 500)) &&
              (!('images' in data) || (data.images is list && data.images.size() <= 20)) &&
-             (!('characteristics' in data) || (data.characteristics is list && data.characteristics.size() <= 50));
+             (!('characteristics' in data) || (data.characteristics is list && data.characteristics.size() <= 100));
     }
 
     function isValidOrder(data) {

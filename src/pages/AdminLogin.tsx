@@ -3,13 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Lock, ShieldAlert } from "lucide-react";
+import { Lock, ShieldAlert, Chrome } from "lucide-react";
+import { useAuth } from "../lib/auth-context";
 
 export function AdminLogin() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { signInWithGoogle, user } = useAuth();
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,6 +20,16 @@ export function AdminLogin() {
       navigate("/admin");
     } else {
       setError("Неверный логин или пароль");
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await signInWithGoogle();
+      localStorage.setItem("admin_auth", "true");
+      navigate("/admin");
+    } catch (err) {
+      setError("Ошибка входа через Google");
     }
   };
 
@@ -59,8 +71,27 @@ export function AdminLogin() {
                 {error}
               </div>
             )}
-            <Button type="submit" className="w-full h-12 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98]">
-              Авторизоваться
+            <Button type="submit" className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 text-white font-bold rounded-xl shadow-lg transition-all active:scale-[0.98]">
+              Войти по паролю
+            </Button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-100"></div>
+              </div>
+              <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-bold">
+                <span className="bg-white px-4 text-zinc-400">Или через Google</span>
+              </div>
+            </div>
+
+            <Button 
+              type="button" 
+              onClick={handleGoogleLogin}
+              variant="outline" 
+              className="w-full h-12 border-zinc-200 hover:bg-zinc-50 text-zinc-700 font-bold rounded-xl flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+            >
+              <Chrome className="w-5 h-5 text-orange-500" />
+              Войти как kancloft@gmail.com
             </Button>
           </form>
           <div className="mt-8 text-center">
