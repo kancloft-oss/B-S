@@ -18,7 +18,7 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area 
 } from 'recharts';
-import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, addDoc, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, addDoc, query, where, orderBy, limit, startAfter } from "firebase/firestore";
 import { db } from "../firebase";
 import * as XLSX from 'xlsx';
 
@@ -839,18 +839,73 @@ function CRMView() {
 function ProductMatrixView() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastDoc, setLastDoc] = useState<any>(null);
+  const [hasMore, setHasMore] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
-    fetchProducts();
+    fetchProducts(true);
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (isInitial = false) => {
+    setLoading(true);
     try {
-      const snapshot = await getDocs(collection(db, "products"));
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
-      setLoading(false);
+      let q = query(
+        collection(db, "products"), 
+        orderBy("name"), 
+        limit(PAGE_SIZE)
+      );
+
+      if (!isInitial && lastDoc) {
+        q = query(
+          collection(db, "products"), 
+          orderBy("name"), 
+          startAfter(lastDoc), 
+          limit(PAGE_SIZE)
+        );
+      }
+
+      const snapshot = await getDocs(q);
+      const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      
+      if (isInitial) {
+        setProducts(newProducts);
+      } else {
+        setProducts(prev => [...prev, ...newProducts]);
+      }
+
+      setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
+      setHasMore(snapshot.docs.length === PAGE_SIZE);
     } catch (error) {
       handleFirestoreError(error, OperationType.LIST, "products");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchTerm) {
+      fetchProducts(true);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Search by SKU or Name (Firestore prefix search is tricky, so we do exact SKU or simple limit)
+      const q = query(
+        collection(db, "products"),
+        where("sku", "==", searchTerm),
+        limit(10)
+      );
+      const snapshot = await getDocs(q);
+      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      setHasMore(false);
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -858,6 +913,7 @@ function ProductMatrixView() {
     const data = products.map(p => ({
       'ID': p.id,
       'Название': p.name,
+      'Артикул': p.sku,
       'Цена': p.price,
       'Остаток': p.stock,
       'Категория': p.category || 'Без категории'
@@ -872,9 +928,18 @@ function ProductMatrixView() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Товарная матрица</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2" onClick={exportToExcel}><Download className="w-4 h-4" /> Экспорт (Excel)</Button>
-          <Button className="bg-orange-500 gap-2"><Plus className="w-4 h-4" /> Добавить товар</Button>
+        <div className="flex gap-4">
+          <form onSubmit={handleSearch} className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <Input 
+              placeholder="Поиск по артикулу..." 
+              className="pl-10 w-64 h-11 rounded-xl"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </form>
+          <Button variant="outline" className="gap-2 h-11 rounded-xl" onClick={exportToExcel}><Download className="w-4 h-4" /> Экспорт (Excel)</Button>
+          <Button className="bg-orange-500 gap-2 h-11 rounded-xl"><Plus className="w-4 h-4" /> Добавить товар</Button>
         </div>
       </div>
 
@@ -901,8 +966,8 @@ function ProductMatrixView() {
           <CardContent className="p-4 flex items-center gap-4">
             <div className="bg-blue-100 p-3 rounded-xl"><RefreshCcw className="w-6 h-6 text-blue-600" /></div>
             <div>
-              <div className="text-2xl font-bold text-blue-700">100%</div>
-              <div className="text-xs text-blue-600 font-medium">Синхронизация с 1С</div>
+              <div className="text-2xl font-bold text-blue-700">13 000+</div>
+              <div className="text-xs text-blue-600 font-medium">Товаров в базе</div>
             </div>
           </CardContent>
         </Card>
@@ -913,10 +978,10 @@ function ProductMatrixView() {
           <TableHeader className="bg-zinc-50">
             <TableRow>
               <TableHead>Товар</TableHead>
+              <TableHead>Артикул</TableHead>
               <TableHead>Категория</TableHead>
               <TableHead>Цена</TableHead>
               <TableHead>Остаток</TableHead>
-              <TableHead>Хватит на</TableHead>
               <TableHead className="text-right">Действия</TableHead>
             </TableRow>
           </TableHeader>
@@ -926,18 +991,19 @@ function ProductMatrixView() {
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <img src={product.image} className="w-10 h-10 rounded-lg object-cover border" alt="" />
-                    <span className="font-medium">{product.name}</span>
+                    <div>
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-[10px] text-zinc-400 font-mono">{product.id}</div>
+                    </div>
                   </div>
                 </TableCell>
+                <TableCell className="font-mono text-xs">{product.sku}</TableCell>
                 <TableCell>{product.category || 'Инструмент'}</TableCell>
                 <TableCell className="font-bold">{product.price} ₽</TableCell>
                 <TableCell>
                   <Badge variant={product.stock < 10 ? "destructive" : "secondary"}>
                     {product.stock} шт.
                   </Badge>
-                </TableCell>
-                <TableCell className="text-zinc-500 text-sm">
-                  {product.stock < 10 ? '3 дня' : '15 дней'}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
@@ -949,6 +1015,19 @@ function ProductMatrixView() {
             ))}
           </TableBody>
         </Table>
+        
+        {hasMore && (
+          <div className="p-6 border-t border-zinc-100 flex justify-center">
+            <Button 
+              variant="outline" 
+              onClick={() => fetchProducts(false)} 
+              disabled={loading}
+              className="rounded-xl px-8"
+            >
+              {loading ? "Загрузка..." : "Загрузить еще"}
+            </Button>
+          </div>
+        )}
       </Card>
     </div>
   );
@@ -1061,7 +1140,7 @@ function Import1CView() {
 
       addLog(`Найдено товаров в файле: ${jsonData.length}`);
 
-      const batchSize = 10; // Small batch size for better UI feedback and to avoid Firestore limits in loops
+      const batchSize = 25; // Increased batch size for 13k items
       for (let i = 0; i < jsonData.length; i += batchSize) {
         const batch = jsonData.slice(i, i + batchSize);
         
@@ -1102,7 +1181,7 @@ function Import1CView() {
 
         const currentProgress = Math.round(((i + batch.length) / jsonData.length) * 100);
         setProgress(currentProgress);
-        if (i % 100 === 0) {
+        if (i % 50 === 0) {
           addLog(`Обработано: ${i + batch.length} из ${jsonData.length}`);
         }
       }
