@@ -3,8 +3,6 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Heart, ShoppingCart, Plus, Minus, ChevronRight, Star } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { useCart, Product } from "@/src/lib/cart-context";
-import { doc, getDoc, collection, getDocs, query, where, limit } from "firebase/firestore";
-import { db } from "@/src/firebase";
 
 export function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -20,26 +18,19 @@ export function ProductDetails() {
       if (!id) return;
       setLoading(true);
       try {
-        const docRef = doc(db, "products", id);
-        const docSnap = await getDoc(docRef);
+        const res = await fetch(`/api/products/${id}`);
         
-        if (docSnap.exists()) {
-          const productData = { id: docSnap.id, ...docSnap.data() } as Product;
+        if (res.ok) {
+          const productData = await res.json();
           setProduct(productData);
           setActiveImage(0);
           
           // Fetch similar products
-          const q = query(
-            collection(db, "products"),
-            where("category", "==", productData.category),
-            limit(6)
-          );
-          const similarSnap = await getDocs(q);
-          const similar = similarSnap.docs
-            .map(d => ({ id: d.id, ...d.data() } as Product))
-            .filter(p => p.id !== id)
-            .slice(0, 5);
-          setSimilarProducts(similar);
+          const simRes = await fetch(`/api/products?category=${encodeURIComponent(productData.category)}&limit=6`);
+          if (simRes.ok) {
+            const similar = await simRes.json();
+            setSimilarProducts(similar.filter((p: any) => p.id !== id).slice(0, 5));
+          }
         } else {
           setProduct(null);
         }

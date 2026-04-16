@@ -18,7 +18,6 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, 
   ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area 
 } from 'recharts';
-import { collection, getDocs, doc, updateDoc, getDoc, deleteDoc, addDoc, query, where, orderBy, limit, startAfter, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 import * as XLSX from 'xlsx';
 
@@ -321,33 +320,38 @@ function OrdersView() {
 
   const fetchOrders = async () => {
     try {
-      const snapshot = await getDocs(collection(db, "orders"));
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
-      data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      setOrders(data);
+      const res = await fetch('/api/orders');
+      if(res.ok) {
+        const data = await res.json();
+        setOrders(data);
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, "orders");
+      console.error(error);
     }
   };
 
   const updateStatus = async (id: string, status: string) => {
     try {
-      await updateDoc(doc(db, "orders", id), { status });
+      await fetch('/api/orders/' + id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
       fetchOrders();
       if (selectedOrder?.id === id) setSelectedOrder({ ...selectedOrder, status });
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `orders/${id}`);
+      console.error(error);
     }
   };
 
   const deleteOrder = async (id: string) => {
     if (window.confirm("Удалить заказ?")) {
       try {
-        await deleteDoc(doc(db, "orders", id));
+        await fetch('/api/orders/' + id, { method: 'DELETE' });
         fetchOrders();
         setSelectedOrder(null);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `orders/${id}`);
+        console.error(error);
       }
     }
   };
@@ -554,8 +558,8 @@ function CRMView() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const ordersSnapshot = await getDocs(collection(db, "orders"));
-        const ordersData = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+        const res = await fetch('/api/orders');
+        const ordersData = res.ok ? await res.json() : [];
         setOrders(ordersData);
 
         // Group orders by phone or customer name to identify unique clients
@@ -851,23 +855,9 @@ function ProductMatrixView() {
   const fetchProducts = async (isInitial = false) => {
     setLoading(true);
     try {
-      let q = query(
-        collection(db, "products"), 
-        orderBy("name"), 
-        limit(PAGE_SIZE)
-      );
-
-      if (!isInitial && lastDoc) {
-        q = query(
-          collection(db, "products"), 
-          orderBy("name"), 
-          startAfter(lastDoc), 
-          limit(PAGE_SIZE)
-        );
-      }
-
-      const snapshot = await getDocs(q);
-      const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      const currentOffset = isInitial ? 0 : products.length;
+      const res = await fetch(`/api/products?limit=${PAGE_SIZE}&offset=${currentOffset}`);
+      const newProducts = await res.json();
       
       if (isInitial) {
         setProducts(newProducts);
@@ -875,10 +865,9 @@ function ProductMatrixView() {
         setProducts(prev => [...prev, ...newProducts]);
       }
 
-      setLastDoc(snapshot.docs[snapshot.docs.length - 1]);
-      setHasMore(snapshot.docs.length === PAGE_SIZE);
+      setHasMore(newProducts.length === PAGE_SIZE);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, "products");
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -893,17 +882,12 @@ function ProductMatrixView() {
 
     setLoading(true);
     try {
-      // Search by SKU or Name (Firestore prefix search is tricky, so we do exact SKU or simple limit)
-      const q = query(
-        collection(db, "products"),
-        where("sku", "==", searchTerm),
-        limit(10)
-      );
-      const snapshot = await getDocs(q);
-      setProducts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product)));
+      const res = await fetch(`/api/products?search=${encodeURIComponent(searchTerm)}&limit=10`);
+      const data = await res.json();
+      setProducts(data);
       setHasMore(false);
     } catch (error) {
-      console.error("Search error:", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -1127,32 +1111,16 @@ function Import1CView() {
 
   const fetchStats = async () => {
     try {
-      const productsSnap = await getDocs(collection(db, "products"));
-      const categoriesSnap = await getDocs(collection(db, "categories"));
-      
-      const now = new Date();
-      const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      
-      let newCount = 0;
-      let latestUpdate = null;
-
-      productsSnap.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.createdAt) {
-          const created = new Date(data.createdAt);
-          if (created > sevenDaysAgo) newCount++;
-          if (!latestUpdate || created > new Date(latestUpdate)) {
-            latestUpdate = data.createdAt;
-          }
-        }
-      });
-
-      setStats({
-        totalProducts: productsSnap.size,
-        totalCategories: categoriesSnap.size,
-        newProducts: newCount,
-        lastUpdate: latestUpdate ? new Date(latestUpdate).toLocaleString('ru-RU') : 'Нет данных'
-      });
+      const res = await fetch('/api/stats');
+      if (res.ok) {
+        const data = await res.json();
+        setStats({
+          totalProducts: data.totalProducts,
+          totalCategories: data.totalCategories,
+          newProducts: data.newProducts7d,
+          lastUpdate: data.lastUpdate ? new Date(data.lastUpdate).toLocaleString('ru-RU') : 'Нет данных'
+        });
+      }
     } catch (error) {
       console.error("Error fetching stats:", error);
     }
@@ -1173,7 +1141,7 @@ function Import1CView() {
     setLoading(true);
     setLogs([]);
     setProgress(0);
-    addLog("Начало высокоскоростной синхронизации...");
+    addLog("Начало высокоскоростной локальной синхронизации через API...");
 
     try {
       const data = await file.arrayBuffer();
@@ -1182,109 +1150,57 @@ function Import1CView() {
       const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
 
       addLog(`Файл прочитан. Найдено строк: ${jsonData.length}`);
-      addLog("Загрузка текущей базы для сопоставления (это сэкономит тысячи запросов)...");
+      
+      const CHUNK_SIZE = 500;
+      const chunks = [];
+      for (let i = 0; i < jsonData.length; i += CHUNK_SIZE) {
+        chunks.push(jsonData.slice(i, i + CHUNK_SIZE));
+      }
 
-      // 1. Fetch all existing SKUs to avoid per-item queries (The "Speed Secret")
-      const existingProductsMap = new Map<string, string>(); // SKU -> DocID
-      const snapshot = await getDocs(collection(db, "products"));
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.sku) existingProductsMap.set(String(data.sku), doc.id);
-      });
-
-      addLog(`База загружена (${existingProductsMap.size} товаров). Начинаем пакетную обработку...`);
-
-      const uniqueCategories = new Set<string>();
-      const total = jsonData.length;
-      let processed = 0;
-      let currentBatch = writeBatch(db);
-      let batchCount = 0;
-
-      for (const row of jsonData) {
-        const sku = String(row['Артикул'] || row['Код'] || '');
-        if (!sku) continue;
-
-        const category = row['Категория'] || 'Без категории';
-        uniqueCategories.add(category);
-
-        const productData = {
-          name: row['Наименование'] || '',
-          fullName: row['Наименование полное'] || '',
+      let processedCount = 0;
+      for (let idx = 0; idx < chunks.length; idx++) {
+        const chunk = chunks[idx];
+        const payload = chunk.map((row: any) => ({
+          name: String(row['Наименование'] || ''),
           price: Number(row['Розничная цена ₽']) || 0,
           stock: Number(row['Остаток']) || 0,
-          unit: row['Ед.изм'] || 'шт',
-          sku: sku,
-          code: String(row['Код'] || ''),
-          category: category,
-          description: row['Описание'] || '',
-          updatedAt: new Date().toISOString()
-        };
-
-        const existingId = existingProductsMap.get(sku);
-        if (existingId) {
-          const docRef = doc(db, "products", existingId);
-          currentBatch.update(docRef, productData);
-        } else {
-          const docRef = doc(collection(db, "products"));
-          currentBatch.set(docRef, {
-            ...productData,
-            createdAt: new Date().toISOString(),
-            image: 'https://picsum.photos/seed/' + sku + '/400/400',
-            salesCount: 0
-          });
-        }
-
-        batchCount++;
-        processed++;
-
-        // Firestore allows up to 500 operations per batch
-        if (batchCount >= 400) {
-          await currentBatch.commit();
-          currentBatch = writeBatch(db);
-          batchCount = 0;
-          setProgress(Math.round((processed / total) * 100));
-          addLog(`Синхронизировано: ${processed} из ${total}`);
-        }
-      }
-
-      // Final batch
-      if (batchCount > 0) {
-        await currentBatch.commit();
-      }
-
-      // 2. Update Categories Collection
-      addLog(`Обновление списка групп товаров (${uniqueCategories.size})...`);
-      let catBatch = writeBatch(db);
-      let catCount = 0;
-      
-      for (const categoryName of Array.from(uniqueCategories)) {
-        const catRef = doc(db, "categories", categoryName);
-        catBatch.set(catRef, { 
-          name: categoryName, 
-          slug: categoryName.toLowerCase().replace(/\s+/g, '-'),
-          updatedAt: new Date().toISOString() 
-        }, { merge: true });
+          sku: String(row['Артикул'] || row['Код'] || ''),
+          category: String(row['Категория'] || 'Без категории'),
+          description: String(row['Описание'] || '')
+        }));
         
-        catCount++;
-        if (catCount >= 400) {
-          await catBatch.commit();
-          catBatch = writeBatch(db);
-          catCount = 0;
-        }
+        const res = await fetch('/api/products/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ products: payload })
+        });
+        
+        if (!res.ok) throw new Error('Ошибка сети при загрузке чанка');
+        
+        processedCount += chunk.length;
+        setProgress(Math.round((processedCount / jsonData.length) * 100));
+        addLog(`Отправлено ${processedCount} из ${jsonData.length} товаров...`);
       }
       
-      if (catCount > 0) {
-        await catBatch.commit();
+      addLog("Обновление категорий...");
+      const uniqueCats = new Set(jsonData.map((row: any) => row['Категория'] || 'Без категории'));
+      for (const cat of uniqueCats) {
+        await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: cat })
+        });
       }
 
-      addLog("Синхронизация успешно завершена!");
       setProgress(100);
-      fetchStats(); // Refresh stats after import
+      addLog("Синхронизация успешно завершена!");
+      fetchStats();
     } catch (error) {
       addLog(`Ошибка: ${error instanceof Error ? error.message : String(error)}`);
       console.error(error);
     } finally {
       setLoading(false);
+      setFile(null);
     }
   };
 

@@ -2,8 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, Loader2 } from "lucide-react";
 import { Input } from "./ui/input";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/src/firebase";
 
 export function SearchBar({ className }: { className?: string }) {
   const [query, setQuery] = useState("");
@@ -33,15 +31,9 @@ export function SearchBar({ className }: { className?: string }) {
     const timer = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const snapshot = await getDocs(collection(db, "products"));
-        const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
-        
-        const lowerQuery = query.toLowerCase();
-        const filtered = allProducts.filter(p => 
-          p.name.toLowerCase().includes(lowerQuery) || 
-          (p.description && p.description.toLowerCase().includes(lowerQuery)) ||
-          p.category.toLowerCase().includes(lowerQuery)
-        );
+        const response = await fetch(`/api/products?search=${encodeURIComponent(query)}&limit=10`);
+        if (!response.ok) throw new Error('Search failed');
+        const filtered = await response.json();
         
         setResults(filtered);
         setIsOpen(true);

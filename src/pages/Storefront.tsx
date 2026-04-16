@@ -4,8 +4,7 @@ import { Search, ShoppingCart, Heart, Plus, Minus, Trash2, ArrowRight, CheckCirc
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { useCart, Product } from "@/src/lib/cart-context";
-import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
-import { db, auth } from "@/src/firebase";
+import { auth } from "@/src/firebase";
 
 const CATEGORIES_DATA = [
   { name: "Холсты", icon: Package, image: "https://picsum.photos/seed/canvas/100/100" },
@@ -36,21 +35,31 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
   const [isSortOpen, setIsSortOpen] = useState(false);
   const { cart, favorites, addToCart, updateQuantity, removeFromCart, clearCart, toggleFavorite, cartTotal, cartCount } = useCart();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch Products
-        const productsSnapshot = await getDocs(collection(db, "products"));
-        const productsData = productsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+        setLoading(true);
+        setError(null);
+        
+        // 1. Fetch Products with limit and category filter
+        let productsUrl = '/api/products?limit=48';
+        if (categoryParam) {
+          productsUrl = `/api/products?category=${encodeURIComponent(categoryParam)}&limit=100`;
+        }
+
+        const productsRes = await fetch(productsUrl);
+        if (!productsRes.ok) throw new Error('Fetch products failed');
+        const productsData = await productsRes.json();
         setProducts(productsData);
 
-        // Fetch Categories
-        const categoriesSnapshot = await getDocs(collection(db, "categories"));
-        const categoriesData = categoriesSnapshot.docs.map(doc => {
-          const data = doc.data();
+        // 2. Fetch Categories (usually fewer than products)
+        const categoriesRes = await fetch('/api/categories');
+        const categoriesRaw = categoriesRes.ok ? await categoriesRes.json() : [];
+        const categoriesData = categoriesRaw.map((data: any) => {
           // Try to match with hardcoded icons if possible
           const matched = CATEGORIES_DATA.find(c => c.name === data.name);
           return {
@@ -61,8 +70,13 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         });
         
         setCategories(categoriesData.length > 0 ? categoriesData : CATEGORIES_DATA);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching data:", error);
+        if (error.message?.includes("Quota exceeded") || error.code === "resource-exhausted") {
+          setError("Превышен лимит запросов к базе данных (Quota Exceeded). Лимиты обновятся через некоторое время. Пожалуйста, попробуйте позже.");
+        } else {
+          setError("Ошибка при загрузке данных. Пожалуйста, проверьте соединение.");
+        }
       } finally {
         setLoading(false);
       }
@@ -113,7 +127,14 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
     };
 
     try {
-      await addDoc(collection(db, "orders"), orderData);
+      const res = await fetch('/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(orderData)
+      });
+      if (!res.ok) throw new Error('Failed to create order');
       clearCart();
       setOrderSuccess(true);
     } catch (error) {
@@ -124,6 +145,25 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
 
   if (loading) {
     return <div className="flex justify-center items-center h-64 text-zinc-500">Загрузка товаров...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-red-900 mb-2">Упс! Что-то пошло не так</h2>
+          <p className="text-red-700 max-w-md mx-auto">{error}</p>
+          <Button 
+            variant="outline" 
+            className="mt-6 border-red-200 text-red-700 hover:bg-red-100"
+            onClick={() => window.location.reload()}
+          >
+            Попробовать снова
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (orderSuccess) {
