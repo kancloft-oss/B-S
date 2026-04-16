@@ -101,15 +101,13 @@ function AppContent() {
       {/* Desktop Header - Main (Sticky) */}
       <header className="hidden md:block sticky top-0 z-50 bg-white border-b border-brand-border shadow-sm">
         <div className="max-w-7xl mx-auto px-4 h-[90px] flex items-center gap-6">
-          <Link to="/" className="flex items-center shrink-0 group">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-zinc-900 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-zinc-200 group-hover:scale-105 transition-transform">
-                B
-              </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-black tracking-tighter text-zinc-900 leading-none">BRUSHES</span>
-                <span className="text-[10px] font-bold tracking-[0.2em] text-zinc-400 leading-none mt-1 uppercase">& Sisters</span>
-              </div>
+          <Link to="/" className="flex items-center shrink-0">
+            <div className="flex items-center justify-center overflow-hidden">
+              <img 
+                src={logo} 
+                alt="Brushes and Sisters" 
+                className="h-20 w-auto object-contain"
+              />
             </div>
           </Link>
           
@@ -184,11 +182,12 @@ function AppContent() {
         {/* Top Row: h-[52px] */}
         <div className="w-full px-4 pt-3 pb-2 flex items-center justify-between gap-2 h-[52px]">
           <div className="flex items-center gap-2 shrink-0">
-            <Link to="/" className="flex items-center gap-1.5 shrink-0">
-              <div className="w-8 h-8 bg-zinc-900 rounded-lg flex items-center justify-center text-white font-black text-sm">
-                B
-              </div>
-              <span className="text-sm font-black tracking-tighter text-zinc-900">BRUSHES</span>
+            <Link to="/" className="flex items-center justify-center shrink-0 overflow-hidden">
+              <img 
+                src={logo} 
+                alt="Logo" 
+                className="h-10 w-auto object-contain"
+              />
             </Link>
             <div className="flex items-center gap-1 text-sm font-medium text-zinc-900 cursor-pointer">
               Махачкала <ChevronDown className="w-4 h-4 text-zinc-500" />
