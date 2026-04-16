@@ -7,7 +7,7 @@ import {
   Edit2, Save, X, Search, Image as ImageIcon, Tag, UserPlus, LogOut, 
   Activity, ShieldAlert, Calendar, Download, Filter, ArrowUpRight, ArrowDownRight,
   UserCheck, UserMinus, Flame, Thermometer, Snowflake, Mail, Phone, MapPin,
-  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal
+  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal, Star
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -32,6 +32,11 @@ interface Product {
   category?: string;
   salesCount?: number;
   lastOrdered?: string;
+  sku?: string;
+  code?: string;
+  unit?: string;
+  fullName?: string;
+  description?: string;
 }
 
 interface OrderItem {
@@ -1024,7 +1029,249 @@ function AdminUsersView() {
   );
 }
 
-// 7. System Logs View
+// 7. Import 1C View
+function Import1CView() {
+  const [file, setFile] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [logs, setLogs] = useState<string[]>([]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const addLog = (msg: string) => {
+    setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+  };
+
+  const handleImport = async () => {
+    if (!file) return;
+    setLoading(true);
+    setLogs([]);
+    setProgress(0);
+    addLog("Начало импорта из 1С...");
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+
+      addLog(`Найдено товаров в файле: ${jsonData.length}`);
+
+      const batchSize = 10; // Small batch size for better UI feedback and to avoid Firestore limits in loops
+      for (let i = 0; i < jsonData.length; i += batchSize) {
+        const batch = jsonData.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (row: any) => {
+          const sku = String(row['Артикул'] || row['Код'] || '');
+          if (!sku) return;
+
+          const productData = {
+            name: row['Наименование'] || '',
+            fullName: row['Наименование полное'] || '',
+            price: Number(row['Розничная цена ₽']) || 0,
+            stock: Number(row['Остаток']) || 0,
+            unit: row['Ед.изм'] || 'шт',
+            sku: sku,
+            code: String(row['Код'] || ''),
+            category: row['Категория'] || 'Без категории',
+            description: row['Описание'] || '',
+          };
+
+          try {
+            const q = query(collection(db, "products"), where("sku", "==", sku));
+            const querySnapshot = await getDocs(q);
+
+            if (!querySnapshot.empty) {
+              const docId = querySnapshot.docs[0].id;
+              await updateDoc(doc(db, "products", docId), productData);
+            } else {
+              await addDoc(collection(db, "products"), {
+                ...productData,
+                image: 'https://picsum.photos/seed/' + sku + '/400/400',
+                salesCount: 0
+              });
+            }
+          } catch (err) {
+            console.error(`Error processing SKU ${sku}:`, err);
+          }
+        }));
+
+        const currentProgress = Math.round(((i + batch.length) / jsonData.length) * 100);
+        setProgress(currentProgress);
+        if (i % 100 === 0) {
+          addLog(`Обработано: ${i + batch.length} из ${jsonData.length}`);
+        }
+      }
+
+      addLog("Импорт успешно завершен!");
+      setProgress(100);
+    } catch (error) {
+      addLog(`Ошибка импорта: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold">Синхронизация с 1С</h2>
+        <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
+          Excel / CSV
+        </Badge>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border-none shadow-sm overflow-hidden">
+            <div className="h-2 bg-orange-500 w-full"></div>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <RefreshCcw className="w-5 h-5 text-orange-500" />
+                Загрузка данных
+              </CardTitle>
+              <CardDescription>
+                Выберите файл Excel, экспортированный из 1С. Система автоматически сопоставит товары по Артикулу или Коду.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="border-2 border-dashed border-zinc-200 rounded-3xl p-12 text-center space-y-4 hover:border-orange-300 transition-all bg-zinc-50/50 group">
+                <div className="bg-white w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-sm group-hover:scale-110 transition-transform">
+                  <Download className="w-10 h-10 text-orange-500" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-zinc-900">Перетащите файл выгрузки</p>
+                  <p className="text-sm text-zinc-500 mt-1">Поддерживаются форматы .xlsx, .xls, .csv</p>
+                </div>
+                <Input 
+                  type="file" 
+                  accept=".xlsx, .xls, .csv" 
+                  onChange={handleFileChange}
+                  className="hidden" 
+                  id="file-upload"
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-zinc-200 bg-white shadow-sm hover:bg-zinc-100 hover:text-zinc-900 h-12 px-8 rounded-xl">
+                    Выбрать файл на компьютере
+                  </div>
+                </label>
+                {file && (
+                  <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 py-2 px-4 rounded-full w-fit mx-auto">
+                    <CheckCircle2 className="w-4 h-4" />
+                    {file.name}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold text-zinc-900">Прогресс обработки</p>
+                    <p className="text-xs text-zinc-500">Не закрывайте вкладку до завершения</p>
+                  </div>
+                  <span className="text-2xl font-black text-orange-500">{progress}%</span>
+                </div>
+                <div className="w-full bg-zinc-100 h-3 rounded-full overflow-hidden">
+                  <div 
+                    className="bg-orange-500 h-full transition-all duration-500 ease-out" 
+                    style={{ width: `${progress}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleImport} 
+                disabled={!file || loading} 
+                className="w-full h-14 bg-zinc-900 hover:bg-zinc-800 text-white font-bold rounded-2xl shadow-xl shadow-zinc-200 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <RefreshCcw className="w-5 h-5 animate-spin" />
+                    Идет синхронизация...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Zap className="w-5 h-5 text-orange-400" />
+                    Запустить обновление базы
+                  </div>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <ListTodo className="w-4 h-4 text-zinc-400" />
+                Журнал событий
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="bg-zinc-900 rounded-2xl p-6 font-mono text-[11px] text-zinc-400 h-80 overflow-y-auto space-y-2 custom-scrollbar">
+                {logs.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-2">
+                    <Terminal className="w-8 h-8 opacity-20" />
+                    <p className="italic">Ожидание начала процесса...</p>
+                  </div>
+                )}
+                {logs.map((log, i) => (
+                  <div key={i} className="flex gap-3 border-b border-zinc-800/50 pb-2 last:border-0">
+                    <span className="text-zinc-600 shrink-0">{log.split(']')[0]}]</span>
+                    <span className="text-zinc-300">{log.split(']')[1]}</span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="space-y-6">
+          <Card className="border-none shadow-sm bg-orange-500 text-white">
+            <CardHeader>
+              <CardTitle className="text-lg">Инструкция</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm opacity-90">
+              <div className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 font-bold">1</div>
+                <p>Выгрузите из 1С отчет в формате Excel.</p>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 font-bold">2</div>
+                <p>Убедитесь, что колонки называются как в примере (Артикул, Наименование, Цена и т.д.).</p>
+              </div>
+              <div className="flex gap-3">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 font-bold">3</div>
+                <p>Загрузите файл здесь. Система сама обновит существующие товары и добавит новые.</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-sm font-bold">Статистика базы</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
+                <span className="text-xs text-zinc-500 font-medium">Всего товаров</span>
+                <span className="font-bold text-zinc-900">~6 800</span>
+              </div>
+              <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
+                <span className="text-xs text-zinc-500 font-medium">Последнее обновление</span>
+                <span className="font-bold text-zinc-900">Сегодня, 10:45</span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// 8. System Logs View
 function SystemLogsView() {
   const [logs, setLogs] = useState([
     { id: 1, type: 'error', message: 'Ошибка при выгрузке 1С: API Timeout', time: '10:45:22', path: '/api/sync' },
@@ -1111,6 +1358,7 @@ export function AdminDashboard() {
     { path: "/admin/marketing", icon: Zap, label: "Маркетинг" },
     { path: "/admin/crm", icon: Users, label: "Клиенты (CRM)" },
     { path: "/admin/products", icon: Database, label: "Товары" },
+    { path: "/admin/import", icon: RefreshCcw, label: "Импорт 1С" },
     { path: "/admin/users", icon: UserCheck, label: "Команда" },
     { path: "/admin/system", icon: Monitor, label: "Система" },
     { path: "/admin/settings", icon: Settings, label: "Настройки" },
@@ -1211,6 +1459,7 @@ export function AdminDashboard() {
               <Route path="/marketing" element={<MarketingView />} />
               <Route path="/crm" element={<CRMView />} />
               <Route path="/products" element={<ProductMatrixView />} />
+              <Route path="/import" element={<Import1CView />} />
               <Route path="/users" element={<AdminUsersView />} />
               <Route path="/system" element={<SystemLogsView />} />
               <Route path="/settings" element={
