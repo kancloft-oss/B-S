@@ -92,7 +92,7 @@ function AppContent() {
               </Link>
             )}
             <span className="text-zinc-900 font-bold hover:text-brand-red cursor-pointer transition-colors flex items-center gap-1">
-              <Phone className="w-3.5 h-3.5 text-zinc-400" /> 8 800 550-37-71
+              <Phone className="w-3.5 h-3.5 text-zinc-400" /> +7(938)204-70-05
             </span>
           </div>
         </div>
