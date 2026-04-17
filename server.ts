@@ -75,9 +75,16 @@ async function startServer() {
       }
 
       if (type === 'catalog' && mode === 'file' && req.method === 'POST') {
-        console.log('--- RECEIVED 1C DATA ---');
-        console.log(typeof req.body === 'string' ? req.body.substring(0, 500) : 'Body is not a string');
-        console.log('--- END OF DATA ---');
+        const fs = await import('fs');
+        const path = await import('path');
+        const fileName = `import_${Date.now()}.xml`;
+        const filePath = path.join(process.cwd(), 'import_data', fileName);
+        
+        // В продакшене лучше использовать fs.promises.writeFile
+        await fs.promises.mkdir(path.join(process.cwd(), 'import_data'), { recursive: true });
+        await fs.promises.writeFile(filePath, req.body);
+        
+        console.log(`--- SAVED 1C DATA TO ${filePath} ---`);
         
         return res.send('success');
       }
