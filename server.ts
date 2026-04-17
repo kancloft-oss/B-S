@@ -44,8 +44,18 @@ async function startServer() {
       let paramCount = 1;
 
       if (category) {
-        conditions.push(`category = $${paramCount++}`);
-        params.push(category);
+        // Find if this is a parent category and get its child category names
+        const catRes = await db.query('SELECT name FROM categories WHERE "parentId" = (SELECT id FROM categories WHERE name = $1 LIMIT 1)', [category]);
+        if (catRes.rows.length > 0) {
+           const subCats = catRes.rows.map(r => r.name);
+           const placeholders = subCats.map((_, i) => `$${paramCount + i + 1}`);
+           conditions.push(`category IN ($${paramCount}, ${placeholders.join(', ')})`);
+           params.push(category, ...subCats);
+           paramCount += 1 + subCats.length;
+        } else {
+           conditions.push(`category = $${paramCount++}`);
+           params.push(category);
+        }
       }
       
       if (search) {
@@ -186,11 +196,11 @@ async function startServer() {
       const id = c.id || `cat-${Buffer.from(safeName).toString('base64').substring(0, 32)}`;
       
       await db.query(`
-        INSERT INTO categories (id, name, description, image)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO categories (id, name, description, image, "parentId")
+        VALUES ($1, $2, $3, $4, $5)
         ON CONFLICT (id) DO UPDATE SET
-        name = EXCLUDED.name, description = EXCLUDED.description, image = EXCLUDED.image
-      `, [id, c.name, c.description || '', c.image || '']);
+        name = EXCLUDED.name, description = EXCLUDED.description, image = EXCLUDED.image, "parentId" = EXCLUDED."parentId"
+      `, [id, c.name, c.description || '', c.image || '', c.parentId || null]);
       res.json({ id, ...c });
     } catch (e) { res.status(500).json({ error: (e as Error).message }); }
   });

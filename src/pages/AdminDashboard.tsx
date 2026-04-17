@@ -1186,12 +1186,51 @@ function Import1CView() {
       }
       
       addLog("Обновление категорий...");
-      const uniqueCats = new Set(jsonData.map((row: any) => row['Категория'] || 'Без категории'));
-      for (const cat of uniqueCats) {
+      const uniqueCats = new Set<string>();
+      jsonData.forEach((row: any) => {
+        const cat = row['Категория'];
+        if (cat) uniqueCats.add(cat);
+      });
+      if (uniqueCats.size === 0) uniqueCats.add('Без категории');
+
+      const getParentCat = (catName: string) => {
+        const c = catName.toLowerCase();
+        if (c.includes('кист')) return 'Кисти';
+        if (c.includes('холст') || c.includes('подрамник')) return 'Холсты и подрамники';
+        if (c.includes('бумаг') || c.includes('картон') || c.includes('скетч') || c.includes('альбом') || c.includes('блокнот')) return 'Бумага и альбомы';
+        if (c.includes('краск') || c.includes('акварел') || c.includes('гуаш') || c.includes('акрил') || c.includes('масло') || c.includes('пигмент')) return 'Краски';
+        if (c.includes('карандаш')) return 'Карандаши';
+        if (c.includes('маркер') || c.includes('линер') || c.includes('фломастер') || c.includes('ручк')) return 'Маркеры, линеры и ручки';
+        if (c.includes('мольберт') || c.includes('этюдник') || c.includes('палитра')) return 'Мольберты и палитры';
+        if (c.includes('лак') || c.includes('клей') || c.includes('разбавитель') || c.includes('грунт')) return 'Химия, грунты и лаки';
+        return 'Прочие товары';
+      };
+
+      const parents = new Set<string>();
+      for (const cat of Array.from(uniqueCats)) {
+        const parent = getParentCat(cat);
+        if (parent) parents.add(parent);
+      }
+
+      // 1. Сначала создаем родительские категории
+      const parentIds: Record<string, string> = {};
+      for (const parent of Array.from(parents)) {
+        const res = await fetch('/api/categories', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: parent })
+        });
+        const data = await res.json();
+        parentIds[parent] = data.id;
+      }
+
+      // 2. Теперь создаем подкатегории с привязкой
+      for (const cat of Array.from(uniqueCats)) {
+        const parentName = getParentCat(cat);
         await fetch('/api/categories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: cat })
+          body: JSON.stringify({ name: cat, parentId: parentName ? parentIds[parentName] : null })
         });
       }
 

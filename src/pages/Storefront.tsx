@@ -46,9 +46,9 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         setError(null);
         
         // 1. Fetch Products with limit and category filter
-        let productsUrl = '/api/products?limit=48';
+        let productsUrl = '/api/products?limit=200';
         if (categoryParam) {
-          productsUrl = `/api/products?category=${encodeURIComponent(categoryParam)}&limit=100`;
+           productsUrl = `/api/products?category=${encodeURIComponent(categoryParam)}&limit=200`;
         }
 
         const productsRes = await fetch(productsUrl);
@@ -59,31 +59,34 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         const productsData = await productsRes.json();
         setProducts(productsData);
 
-        // 2. Fetch Categories (usually fewer than products)
+        // 2. Fetch Categories
         const categoriesRes = await fetch('/api/categories');
         const categoriesRaw = categoriesRes.ok ? await categoriesRes.json() : [];
         const categoriesData = categoriesRaw.map((data: any) => {
           // Try to match with hardcoded icons if possible
           const matched = CATEGORIES_DATA.find(c => c.name === data.name);
           return {
+            id: data.id,
+            parentId: data.parentId,
             name: data.name,
             icon: matched?.icon || Package,
-            image: matched?.image || `https://picsum.photos/seed/${data.name}/100/100`
+            image: matched?.image || `https://picsum.photos/seed/${Buffer.from(data.name).toString('base64').substring(0,8)}/100/100` // Better random image seed
           };
         });
         
-        setCategories(categoriesData.length > 0 ? categoriesData : CATEGORIES_DATA);
+        // Use only parent categories for the top-level display
+        const parentCategories = categoriesData.filter((c: any) => !c.parentId);
+        setCategories(parentCategories.length > 0 ? parentCategories : CATEGORIES_DATA);
       } catch (error: any) {
         console.error("Error fetching data:", error);
         
-        // Handle specific server-sent error payloads if possible
         if (error.message?.includes("DB_AUTH_FAILED")) {
            setError("ОШИБКА АВТОРИЗАЦИИ БД: Ваш пароль или логин к базе данных неверен. Проверьте переменную DATABASE_URL.");
            return;
         }
 
         if (error.message?.includes("Quota exceeded") || error.code === "resource-exhausted") {
-          setError("Превышен лимит запросов к базе данных (Quota Exceeded). Лимиты обновятся через некоторое время. Пожалуйста, попробуйте позже.");
+          setError("Превышен лимит запросов к базе данных (Quota Exceeded). Лимиты обновятся через некоторое время.");
         } else {
           setError("Ошибка при загрузке данных: " + (error.message || "проверьте соединение с базой данных."));
         }
@@ -92,13 +95,12 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
       }
     };
     fetchData();
-  }, []);
+  }, [categoryParam]);
 
   const filteredProducts = useMemo(() => {
+    // The backend already filters them, so we just take them all.
+    // We only need to sort them.
     let filtered = products;
-    if (categoryParam) {
-      filtered = products.filter(p => p.category === categoryParam);
-    }
     
     // Sort
     return [...filtered].sort((a, b) => {
@@ -107,7 +109,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
       if (sortBy === "newest") return b.id.localeCompare(a.id); // Mock sorting by ID for newest
       return 0; // popular (default)
     });
-  }, [products, categoryParam, sortBy]);
+  }, [products, sortBy]);
 
   const handleToggleFavorite = (e: React.MouseEvent, id: string) => {
     e.preventDefault();

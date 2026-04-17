@@ -51,6 +51,7 @@ export async function initializeDatabase() {
 
       CREATE TABLE IF NOT EXISTS categories (
         id TEXT PRIMARY KEY,
+        "parentId" TEXT,
         name TEXT,
         description TEXT,
         image TEXT
