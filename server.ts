@@ -149,8 +149,7 @@ async function startServer() {
         Key: key,
         Body: buffer,
         ContentLength: buffer.length,
-        ContentType: contentType,
-        ACL: 'public-read'
+        ContentType: contentType
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
