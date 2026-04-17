@@ -3,7 +3,11 @@ import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import multer from 'multer';
 import { db, initializeDatabase } from './server/db.js';
+import { uploadToS3 } from './src/services/s3Service.js';
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +31,26 @@ async function startServer() {
       } else {
         res.status(500).json({ status: 'error', message: (e as Error).message });
       }
+    }
+  });
+
+  // ================= UPLOAD API =================
+  app.post('/api/upload', upload.single('file'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'File is required' });
+      }
+      
+      let folder = req.body.folder || 'general';
+      const validFolders = ['banners', 'products', 'categories', 'general'];
+      if (!validFolders.includes(folder)) folder = 'general';
+
+      const fileUrl = await uploadToS3(req.file, folder);
+      
+      res.json({ url: fileUrl });
+    } catch (e) {
+      console.error('Upload Error:', e);
+      res.status(500).json({ error: (e as Error).message });
     }
   });
 
