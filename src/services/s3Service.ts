@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import path from 'path';
@@ -15,6 +16,29 @@ const s3Config = {
 
 const s3Client = new S3Client(s3Config);
 const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'brusher-s3';
+
+/**
+ * Downloads a file from Timeweb Cloud S3
+ */
+export async function downloadFromS3(key: string): Promise<string> {
+  const command = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+  });
+
+  const response = await s3Client.send(command);
+  
+  // Получаем тело ответа как Readable stream и преобразуем в строку
+  const streamToBuffer = (stream: any) => new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+    stream.on('error', reject);
+    stream.on('end', () => resolve(Buffer.concat(chunks)));
+  });
+
+  const buffer = await streamToBuffer(response.Body);
+  return buffer.toString('utf-8');
+}
 
 /**
  * Optimizes an image using sharp.
