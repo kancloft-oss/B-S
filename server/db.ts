@@ -2,9 +2,12 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import 'dotenv/config';
 
+// Force usage of the public IP for development within AI Studio
+const dbUrl = process.env.DATABASE_URL || 'postgresql://admin:NMTm=C|nC25lYL@72.56.9.88:5432/postgres';
+
 // Initialize the connection pool using the DATABASE_URL environment variable
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: dbUrl,
 });
 
 export const db = pool;
