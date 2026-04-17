@@ -108,7 +108,7 @@ async function startServer() {
       // Если 1С отправляет файл (POST), перенаправляем его прямо в S3
       if (type === 'catalog' && mode === 'file' && req.method === 'POST' && filename) {
         try {
-          const fileKey = `1c_exchange/${filename}`;
+          const fileKey = filename;
           
           // Всегда используем application/octet-stream для надежности бинарной передачи
           await uploadRawToS3(req.body, fileKey, 'application/octet-stream');
@@ -147,9 +147,7 @@ async function startServer() {
       await s3Client.send(new PutObjectCommand({
         Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
         Key: key,
-        Body: buffer,
-        ContentLength: buffer.length,
-        ContentType: contentType
+        Body: buffer
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
