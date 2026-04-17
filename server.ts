@@ -110,7 +110,8 @@ async function startServer() {
         try {
           const fileKey = `1c_exchange/${filename}`;
           
-          await uploadRawToS3(req.body, fileKey, req.get('Content-Type') || 'application/octet-stream');
+          // Всегда используем application/octet-stream для надежности бинарной передачи
+          await uploadRawToS3(req.body, fileKey, 'application/octet-stream');
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
