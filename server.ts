@@ -57,23 +57,23 @@ async function startServer() {
   });
 
   // ================= API 1C EXCHANGE =================
-  app.post('/api/1c/exchange', async (req, res) => {
+  // 1С часто использует GET для проверки соединения и инициализации
+  app.all('/api/1c/exchange', async (req, res) => {
     try {
       const type = req.query.type;
       const mode = req.query.mode;
 
-      console.log(`1C Exchange request: type=${type}, mode=${mode}`);
+      console.log(`1C Exchange ${req.method} request: type=${type}, mode=${mode}`);
 
       if (type === 'catalog' && mode === 'checkauth') {
-        return res.send('success\nkey\nvalue');
+        return res.send('success\nPHPSESSID\nsecretKey123');
       }
       
       if (type === 'catalog' && mode === 'init') {
         return res.send('zip=no\nfile_limit=5000000');
       }
 
-      if (type === 'catalog' && mode === 'file') {
-        const xmlData = req.body; 
+      if (type === 'catalog' && mode === 'file' && req.method === 'POST') {
         return res.send('success');
       }
 
