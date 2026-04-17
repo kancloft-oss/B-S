@@ -135,16 +135,19 @@ async function startServer() {
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY || '',
         secretAccessKey: process.env.S3_SECRET_KEY || ''
-      }
+      },
+      // Ensure we use path-style addressing if necessary
+      forcePathStyle: true, 
     });
 
     try {
-      console.log(`--- S3 UPLOAD ATTEMPT --- Bucket: ${process.env.S3_BUCKET_NAME || 'brusher-s3'}, Endpoint: ${process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru'}, Key: ${key}`);
+      console.log(`--- S3 UPLOAD ATTEMPT --- Bucket: ${process.env.S3_BUCKET_NAME || 'brusher-s3'}, Key: ${key}, Size: ${buffer.length}`);
       
       await s3Client.send(new PutObjectCommand({
         Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
         Key: key,
         Body: buffer,
+        ContentLength: buffer.length,
         ContentType: contentType,
         ACL: 'public-read'
       }));
