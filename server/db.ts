@@ -3,7 +3,13 @@ const { Pool } = pkg;
 import 'dotenv/config';
 
 // Initialize the connection pool using the DATABASE_URL environment variable
-const dbUrl = process.env.DATABASE_URL || 'postgresql://admin:NMTm=C|nC25lYL@72.56.9.88:5432/postgres';
+let dbUrl = process.env.DATABASE_URL || 'postgresql://admin:NMTm=C|nC25lYL@72.56.9.88:5432/postgres';
+
+// Validate that it's a valid postgres URI (in case user pasted just a password in settings)
+if (!dbUrl.startsWith('postgres')) {
+  console.warn('DATABASE_URL is not a valid postgres connection string. Using fallback.');
+  dbUrl = 'postgresql://admin:NMTm=C|nC25lYL@72.56.9.88:5432/postgres';
+}
 
 const pool = new Pool({
   connectionString: dbUrl,
