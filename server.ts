@@ -58,14 +58,18 @@ async function startServer() {
     }
   });
 
+  import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+// ... (imports)
+
+// ... existing code ...
+
   // ================= API 1C EXCHANGE =================
   // 1С часто использует GET для проверки соединения и инициализации
   app.all('/api/1c/exchange', async (req, res) => {
     try {
-      const type = req.query.type;
-      const mode = req.query.mode;
+      const { type, mode, filename } = req.query;
 
-      console.log(`1C Exchange ${req.method} request: type=${type}, mode=${mode}`);
+      console.log(`1C Exchange ${req.method} request: type=${type}, mode=${mode}, file=${filename}`);
 
       if (type === 'catalog' && mode === 'checkauth') {
         return res.send('success\nPHPSESSID\nsecretKey123');
@@ -75,23 +79,18 @@ async function startServer() {
         return res.send('zip=no\nfile_limit=5000000');
       }
 
-      if (type === 'catalog' && mode === 'file' && req.method === 'POST') {
+      // Если 1С отправляет файл (POST), перенаправляем его прямо в S3
+      if (type === 'catalog' && mode === 'file' && req.method === 'POST' && filename) {
         try {
-          const xmlData = req.body.toString();
+          const fileKey = `1c_exchange/${filename}`;
           
-          // Парсим данные прямо из памяти
-          console.log('--- PROCESSING 1C DATA IN MEMORY ---');
-          const parsedData = commerceMLParser.parse(xmlData);
+          await uploadRawToS3(req.body, fileKey, req.get('Content-Type') || 'application/octet-stream');
           
-          // Логируем результат парсинга, чтобы увидеть структуру
-          console.log('--- PARSING SUCCESSFUL ---');
-          // Ограничим вывод, чтобы не засорять логи при больших объемах
-          console.log(JSON.stringify(parsedData).substring(0, 1000));
-          
+          console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
         } catch (e) {
-          console.error('Parsing Error:', e);
-          return res.status(500).send('failure\nParsing error');
+          console.error('S3 Upload Error:', e);
+          return res.status(500).send('failure\nS3 Upload error');
         }
       }
 
@@ -101,6 +100,27 @@ async function startServer() {
       res.status(500).send('failure\n' + (e as Error).message);
     }
   });
+
+  // Helper for 1C raw upload
+  async function uploadRawToS3(buffer: Buffer, key: string, contentType: string) {
+    const s3Client = new S3Client({
+      endpoint: process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru',
+      region: process.env.S3_REGION || 'ru-1',
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY || '',
+        secretAccessKey: process.env.S3_SECRET_KEY || ''
+      }
+    });
+
+    await s3Client.send(new PutObjectCommand({
+      Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ACL: 'public-read'
+    }));
+  }
+
   app.get('/api/products', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
