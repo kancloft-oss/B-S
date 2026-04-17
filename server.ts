@@ -182,7 +182,9 @@ async function startServer() {
   app.post('/api/categories', async (req, res) => {
     try {
       const c = req.body;
-      const id = c.id || Date.now().toString();
+      const safeName = (c.name || '').toString().trim();
+      const id = c.id || `cat-${Buffer.from(safeName).toString('base64').substring(0, 32)}`;
+      
       await db.query(`
         INSERT INTO categories (id, name, description, image)
         VALUES ($1, $2, $3, $4)
