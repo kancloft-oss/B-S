@@ -21,7 +21,8 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json({ limit: '50mb' })); // Увеличенный лимит для приема большого массива товаров
-  app.use('/api/1c/exchange', express.text({ type: ['application/xml', 'text/xml', '*/*'], limit: '50mb' }));
+  // Обрабатываем /api/1c/exchange как сырые данные (raw), чтобы принимать и XML, и бинарные файлы
+  app.use('/api/1c/exchange', express.raw({ type: '*/*', limit: '50mb' }));
 
   // API Health Check
   app.get('/api/health', async (req, res) => {
