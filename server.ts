@@ -86,11 +86,11 @@ async function startServer() {
         const now = new Date().toISOString();
         for (const p of products) {
           await client.query(`
-            INSERT INTO products (id, name, sku, category, price, stock, description, image, createdAt, updatedAt)
+            INSERT INTO products (id, name, sku, category, price, stock, description, image, "createdAt", "updatedAt")
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
             ON CONFLICT (id) DO UPDATE SET
             name = EXCLUDED.name, sku = EXCLUDED.sku, category = EXCLUDED.category, price = EXCLUDED.price, 
-            stock = EXCLUDED.stock, description = EXCLUDED.description, image = EXCLUDED.image, updatedAt = EXCLUDED.updatedAt
+            stock = EXCLUDED.stock, description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
           `, [
             p.id || Date.now().toString() + Math.random(),
             p.name,
@@ -123,7 +123,7 @@ async function startServer() {
       const now = new Date().toISOString();
       const id = p.id || Date.now().toString();
       await db.query(`
-        INSERT INTO products (id, name, sku, category, price, stock, description, image, createdAt, updatedAt)
+        INSERT INTO products (id, name, sku, category, price, stock, description, image, "createdAt", "updatedAt")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       `, [id, p.name, p.sku, p.category, p.price, p.stock, p.description, p.image, now, now]);
       res.json({ id, ...p });
@@ -137,7 +137,7 @@ async function startServer() {
       const p = req.body;
       const now = new Date().toISOString();
       await db.query(`
-        UPDATE products SET name = $1, sku = $2, category = $3, price = $4, stock = $5, description = $6, image = $7, updatedAt = $8
+        UPDATE products SET name = $1, sku = $2, category = $3, price = $4, stock = $5, description = $6, image = $7, "updatedAt" = $8
         WHERE id = $9
       `, [p.name, p.sku, p.category, p.price, p.stock, p.description, p.image, now, req.params.id]);
       res.json({ success: true });
@@ -185,7 +185,7 @@ async function startServer() {
       const params: any[] = [];
       
       if (userId) {
-        query += ' WHERE userId = $1';
+        query += ' WHERE "userId" = $1';
         params.push(userId);
       }
       query += ' ORDER BY date DESC';
@@ -205,7 +205,7 @@ async function startServer() {
       const id = o.id || Date.now().toString();
       const now = new Date().toISOString();
       await db.query(`
-        INSERT INTO orders (id, userId, customer, phone, date, total, status, items, createdAt)
+        INSERT INTO orders (id, "userId", customer, phone, date, total, status, items, "createdAt")
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       `, [id, o.userId || '', o.customer, o.phone, o.date || now, o.total, o.status, JSON.stringify(o.items || []), now]);
       res.json({ id, ...o });

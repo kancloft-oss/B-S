@@ -16,37 +16,44 @@ export const db = pool;
 // or converted to async (not using db.exec synchronously anymore)
 // PostgreSQL doesn't use static files like SQLite (database.sqlite)
 export async function initializeDatabase() {
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS products (
-      id TEXT PRIMARY KEY,
-      name TEXT,
-      sku TEXT,
-      category TEXT,
-      price INTEGER,
-      stock INTEGER,
-      description TEXT,
-      image TEXT,
-      createdAt TIMESTAMPTZ,
-      updatedAt TIMESTAMPTZ
-    );
+  try {
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        sku TEXT,
+        category TEXT,
+        price INTEGER,
+        stock INTEGER,
+        description TEXT,
+        image TEXT,
+        "createdAt" TIMESTAMPTZ,
+        "updatedAt" TIMESTAMPTZ
+      );
 
-    CREATE TABLE IF NOT EXISTS categories (
-      id TEXT PRIMARY KEY,
-      name TEXT,
-      description TEXT,
-      image TEXT
-    );
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        description TEXT,
+        image TEXT
+      );
 
-    CREATE TABLE IF NOT EXISTS orders (
-      id TEXT PRIMARY KEY,
-      userId TEXT,
-      customer TEXT,
-      phone TEXT,
-      date TIMESTAMPTZ,
-      total INTEGER,
-      status TEXT,
-      items TEXT,
-      createdAt TIMESTAMPTZ
-    );
-  `);
+      CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        "userId" TEXT,
+        customer TEXT,
+        phone TEXT,
+        date TIMESTAMPTZ,
+        total INTEGER,
+        status TEXT,
+        items TEXT,
+        "createdAt" TIMESTAMPTZ
+      );
+    `);
+    console.log('Database tables initialized successfully');
+  } catch (error) {
+    console.error('Error initializing database tables:', error);
+    // Don't throw, let the server start even if this fails (e.g., if relations exist)
+  }
 }
+
