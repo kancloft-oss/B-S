@@ -19,9 +19,14 @@ async function startServer() {
 
   // Added logging helper
   const logError = (msg: string, path: string) => {
-    const logs = JSON.parse(fs.readFileSync('./logs.json', 'utf-8'));
-    logs.unshift({ id: Date.now(), type: 'error', message: msg, time: new Date().toLocaleTimeString(), path });
-    fs.writeFileSync('./logs.json', JSON.stringify(logs.slice(0, 50)));
+    try {
+      const data = fs.readFileSync('./logs.json', 'utf-8');
+      const logs = data ? JSON.parse(data) : [];
+      logs.unshift({ id: Date.now(), type: 'error', message: msg, time: new Date().toLocaleTimeString(), path });
+      fs.writeFileSync('./logs.json', JSON.stringify(logs.slice(0, 50)));
+    } catch (e) {
+      console.error('Failed to log error:', e);
+    }
   };
 
   app.use(cors());
