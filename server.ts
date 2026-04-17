@@ -111,8 +111,8 @@ async function startServer() {
           // Заменяем слеши на подчеркивания, чтобы избежать ошибки создания папок
           const fileKey = filename.replace(/\//g, '_');
           
-          // Всегда используем application/octet-stream для надежности бинарной передачи
-          await uploadRawToS3(req.body, fileKey, 'application/octet-stream');
+          // Передаем поток (req) напрямую в S3
+          await uploadRawToS3(req, fileKey, 'application/octet-stream');
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
@@ -130,16 +130,11 @@ async function startServer() {
   });
 
   // Helper for 1C raw upload
-  async function uploadRawToS3(buffer: Buffer, key: string, contentType: string) {
+  // Helper for 1C raw streaming upload
+  async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string) {
     const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
-    // Пробуем префиксный стиль: bucket.s3.twcstorage.ru
     const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
     
-    console.log(`--- S3 CONNECTION CONFIG ---`);
-    console.log(`Endpoint: ${endpoint}`);
-    console.log(`Bucket: ${bucket}`);
-    console.log(`Key: ${key}`);
-
     const s3Client = new S3Client({
       endpoint: endpoint,
       region: process.env.S3_REGION || 'ru-1',
@@ -147,14 +142,17 @@ async function startServer() {
         accessKeyId: process.env.S3_ACCESS_KEY || '',
         secretAccessKey: process.env.S3_SECRET_KEY || ''
       },
-      forcePathStyle: false // Отключаем PathStyle для проверки
+      forcePathStyle: false 
     });
+
+    console.log(`--- ATTEMPTING STREAMING UPLOAD TO S3 --- Bucket: ${bucket}, Key: ${key}`);
 
     try {
       await s3Client.send(new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
+        Bucket: bucket,
         Key: key,
-        Body: buffer
+        Body: stream,
+        ContentType: contentType
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
