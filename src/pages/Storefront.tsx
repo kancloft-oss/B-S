@@ -70,7 +70,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
             parentId: data.parentId,
             name: data.name,
             icon: matched?.icon || Package,
-            image: matched?.image || `https://picsum.photos/seed/${Buffer.from(data.name).toString('base64').substring(0,8)}/100/100` // Better random image seed
+            image: matched?.image || `https://picsum.photos/seed/${encodeURIComponent(data.name).substring(0,20)}/100/100` 
           };
         });
         
