@@ -152,17 +152,13 @@ async function startServer() {
 
     try {
       await s3Client.send(new PutObjectCommand({
-        Bucket: bucket,
+        Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
         Key: key,
         Body: buffer
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
-      console.error('--- DETAILED S3 UPLOAD ERROR ---');
-      console.error('Error:', err);
-      
-      const errorMsg = `S3 Upload Error for ${key}: ${err.name} - ${err.message}.`;
-      logToServer(errorMsg, '/api/1c/exchange', true);
+      console.error('--- S3 UPLOAD ERROR ---', err);
       throw err;
     }
   }
