@@ -21,6 +21,7 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json({ limit: '50mb' })); // Увеличенный лимит для приема большого массива товаров
+  app.use('/api/1c/exchange', express.text({ type: ['application/xml', 'text/xml', '*/*'], limit: '50mb' }));
 
   // API Health Check
   app.get('/api/health', async (req, res) => {
@@ -74,6 +75,10 @@ async function startServer() {
       }
 
       if (type === 'catalog' && mode === 'file' && req.method === 'POST') {
+        console.log('--- RECEIVED 1C DATA ---');
+        console.log(typeof req.body === 'string' ? req.body.substring(0, 500) : 'Body is not a string');
+        console.log('--- END OF DATA ---');
+        
         return res.send('success');
       }
 
