@@ -90,7 +90,7 @@ export function ProductDetails() {
           <div className="flex flex-col gap-4 p-4 md:p-0">
             <div className="relative aspect-square rounded-md overflow-hidden bg-brand-gray border border-brand-border">
               <img 
-                src={images[activeImage]} 
+                src={images[activeImage] || undefined} 
                 alt={product.name} 
                 className="w-full h-full object-cover mix-blend-multiply"
               />
@@ -113,7 +113,7 @@ export function ProductDetails() {
                     onClick={() => setActiveImage(idx)}
                     className={`relative w-16 h-16 md:w-20 md:h-20 overflow-hidden border-2 shrink-0 transition-all rounded-md ${activeImage === idx ? "border-brand-red" : "border-transparent hover:border-brand-border"}`}
                   >
-                    <img src={img} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply bg-brand-gray" />
+                    <img src={img || undefined} alt={`${product.name} ${idx + 1}`} className="w-full h-full object-cover mix-blend-multiply bg-brand-gray" />
                   </button>
                 ))}
               </div>
@@ -252,7 +252,7 @@ export function ProductDetails() {
                   </button>
                   
                   <div className="aspect-square mb-4 overflow-hidden rounded-md border border-brand-border bg-brand-gray">
-                    <img src={similar.image} alt={similar.name} className="w-full h-full object-cover mix-blend-multiply" />
+                    <img src={similar.image || undefined} alt={similar.name} className="w-full h-full object-cover mix-blend-multiply" />
                   </div>
                   
                   <div className="flex items-center gap-1 mb-2 text-brand-yellow">

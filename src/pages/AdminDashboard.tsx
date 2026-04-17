@@ -503,7 +503,7 @@ function MarketingView() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {banners.map(banner => (
           <Card key={banner.id} className="border-none shadow-sm overflow-hidden">
-            <img src={banner.image} alt="" className="w-full h-48 object-cover" />
+            <img src={banner.image || undefined} alt="" className="w-full h-48 object-cover" />
             <CardContent className="p-4">
               <div className="flex justify-between items-start mb-4">
                 <div>
@@ -974,7 +974,7 @@ function ProductMatrixView() {
               <TableRow key={product.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <img src={product.image} className="w-10 h-10 rounded-lg object-cover border" alt="" />
+                    <img src={product.image || undefined} className="w-10 h-10 rounded-lg object-cover border" alt="" />
                     <div>
                       <div className="font-medium">{product.name}</div>
                       <div className="text-[10px] text-zinc-400 font-mono">{product.id}</div>

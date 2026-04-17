@@ -102,7 +102,7 @@ function AppContent() {
           <Link to="/" className="flex items-center shrink-0">
             <div className="flex items-center justify-center overflow-hidden">
               <img 
-                src={logo} 
+                src={logo || undefined} 
                 alt="Brushes and Sisters" 
                 className="h-20 w-auto object-contain"
               />
@@ -182,7 +182,7 @@ function AppContent() {
           <div className="flex items-center gap-2 shrink-0">
             <Link to="/" className="flex items-center justify-center shrink-0 overflow-hidden">
               <img 
-                src={logo} 
+                src={logo || undefined} 
                 alt="Logo" 
                 className="h-10 w-auto object-contain"
               />

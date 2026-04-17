@@ -78,7 +78,7 @@ export function SearchBar({ className }: { className?: string }) {
               onClick={() => handleSelect(product.id)}
               className="w-full text-left p-3 hover:bg-zinc-50 flex items-center gap-3 border-b border-zinc-100 last:border-0"
             >
-              <img src={product.image} alt={product.name} className="w-12 h-12 object-cover rounded-lg" />
+              <img src={product.image || undefined} alt={product.name} className="w-12 h-12 object-cover rounded-lg" />
               <div>
                 <div className="font-medium text-zinc-900">{product.name}</div>
                 <div className="text-xs text-zinc-500">{product.category}</div>

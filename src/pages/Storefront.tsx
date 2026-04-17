@@ -343,7 +343,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
                   </div>
                   
                   <div className="aspect-square mb-3 md:mb-4 overflow-hidden rounded-lg relative">
-                    <img src={product.image} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                    <img src={product.image || undefined} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 hidden md:flex gap-1">
                       <div className="w-1.5 h-1.5 rounded-full bg-zinc-800"></div>
                       <div className="w-1.5 h-1.5 rounded-full bg-zinc-300"></div>
@@ -550,7 +550,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
                 </div>
                 
                 <div className="aspect-square mb-4 overflow-hidden rounded-lg relative">
-                  <img src={product.image} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
+                  <img src={product.image || undefined} alt={product.name} className="w-full h-full object-contain mix-blend-multiply" />
                   <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
                     <div className="w-1.5 h-1.5 rounded-full bg-zinc-800"></div>
                     <div className="w-1.5 h-1.5 rounded-full bg-zinc-300"></div>
@@ -689,7 +689,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
               <div className="space-y-3 mb-6 max-h-60 overflow-y-auto pr-2">
                 {cart.map(item => (
                   <div key={item.id} className="flex gap-3 text-sm">
-                    <img src={item.image} alt={item.name} className="w-12 h-12 object-cover rounded border border-brand-border bg-white" />
+                    <img src={item.image || undefined} alt={item.name} className="w-12 h-12 object-cover rounded border border-brand-border bg-white" />
                     <div className="flex-1">
                       <div className="line-clamp-2 text-zinc-800 mb-1">{item.name}</div>
                       <div className="flex justify-between text-zinc-500">
@@ -760,7 +760,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
                 <div className="p-0">
                   {cart.map(item => (
                     <div key={item.id} className="flex gap-4 p-4 hover:bg-brand-gray transition-colors group border-b border-brand-border last:border-0">
-                      <img src={item.image} alt={item.name} className="w-24 h-24 object-cover rounded-md border border-brand-border bg-white" />
+                      <img src={item.image || undefined} alt={item.name} className="w-24 h-24 object-cover rounded-md border border-brand-border bg-white" />
                       <div className="flex-1 flex flex-col">
                         <div className="flex justify-between gap-4 mb-2">
                           <div>

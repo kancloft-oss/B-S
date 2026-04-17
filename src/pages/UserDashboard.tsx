@@ -225,7 +225,7 @@ export default function UserDashboard() {
                           <div key={idx} className="flex items-center gap-3 md:gap-4">
                             <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-lg overflow-hidden shrink-0 border border-zinc-100 flex items-center justify-center">
                               {item.product?.image ? (
-                                <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover mix-blend-multiply" />
+                                <img src={item.product.image || undefined} alt={item.product.name} className="w-full h-full object-cover mix-blend-multiply" />
                               ) : (
                                 <Package className="w-5 h-5 text-zinc-300" />
                               )}
@@ -299,7 +299,7 @@ export default function UserDashboard() {
                           
                           <Link to={`/product/${product.id}`} className="block w-full h-full">
                             <img 
-                              src={product.image} 
+                              src={product.image || undefined} 
                               alt={product.name} 
                               className="w-full h-full object-cover mix-blend-multiply transition-transform duration-500 group-hover:scale-105"
                             />
