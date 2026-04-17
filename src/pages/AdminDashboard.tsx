@@ -1411,11 +1411,14 @@ function Import1CView() {
 
 // 8. System Logs View
 function SystemLogsView() {
-  const [logs, setLogs] = useState([
-    { id: 1, type: 'error', message: 'Ошибка при выгрузке 1С: API Timeout', time: '10:45:22', path: '/api/sync' },
-    { id: 2, type: 'warning', message: 'Высокая нагрузка на БД', time: '10:42:15', path: 'Database' },
-    { id: 3, type: 'info', message: 'Успешный вход: admin', time: '10:30:05', path: '/admin/login' },
-  ]);
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    fetch('/api/logs')
+      .then(res => res.json())
+      .then(data => setLogs(data))
+      .catch(console.error);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -1449,7 +1452,7 @@ function SystemLogsView() {
             <CardTitle className="text-sm font-medium text-zinc-500">Ошибок за 24ч</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-500">3</div>
+            <div className="text-3xl font-bold text-red-500">{logs.filter((l: any) => l.type === 'error').length}</div>
           </CardContent>
         </Card>
       </div>
@@ -1460,15 +1463,17 @@ function SystemLogsView() {
           <Button variant="outline" size="sm">Очистить логи</Button>
         </CardHeader>
         <CardContent>
-          <div className="bg-zinc-900 rounded-xl p-4 font-mono text-xs text-zinc-300 space-y-2 overflow-x-auto">
-            {logs.map(log => (
+          <div className="bg-zinc-900 rounded-xl p-4 font-mono text-xs text-zinc-300 space-y-2 overflow-x-auto min-h-[300px]">
+            {logs.length === 0 ? (
+              <div className="text-zinc-500 italic">Логи пока пусты...</div>
+            ) : logs.map((log: any) => (
               <div key={log.id} className="flex gap-4 border-b border-zinc-800 pb-2 last:border-0">
                 <span className="text-zinc-500">[{log.time}]</span>
                 <span className={log.type === 'error' ? 'text-red-400' : log.type === 'warning' ? 'text-yellow-400' : 'text-emerald-400'}>
                   {log.type.toUpperCase()}
                 </span>
                 <span className="text-zinc-400">[{log.path}]</span>
-                <span>{log.message}</span>
+                <span className="break-all">{log.message}</span>
               </div>
             ))}
           </div>

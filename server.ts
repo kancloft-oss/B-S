@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { createServer as createViteServer } from 'vite';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -9,19 +10,33 @@ import { db, initializeDatabase } from './server/db.js';
 import { uploadToS3 } from './src/services/s3Service.js';
 import { CommerceMLParser } from './src/services/commerceMLParser.js';
 
-const upload = multer({ storage: multer.memoryStorage() });
-const commerceMLParser = new CommerceMLParser();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// ... (existing code top)
 
 async function startServer() {
   await initializeDatabase();
   const app = express();
   const PORT = 3000;
 
+  // Added logging helper
+  const logError = (msg: string, path: string) => {
+    const logs = JSON.parse(fs.readFileSync('./logs.json', 'utf-8'));
+    logs.unshift({ id: Date.now(), type: 'error', message: msg, time: new Date().toLocaleTimeString(), path });
+    fs.writeFileSync('./logs.json', JSON.stringify(logs.slice(0, 50)));
+  };
+
   app.use(cors());
-  app.use(express.json({ limit: '50mb' })); // Увеличенный лимит для приема большого массива товаров
+  app.use(express.json({ limit: '50mb' }));
+
+  app.get('/api/logs', (req, res) => {
+    res.json(JSON.parse(fs.readFileSync('./logs.json', 'utf-8')));
+  });
+
+  const upload = multer({ storage: multer.memoryStorage() });
+  const commerceMLParser = new CommerceMLParser();
+
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
+  
   // Обрабатываем /api/1c/exchange как сырые данные (raw), чтобы принимать и XML, и бинарные файлы
   app.use('/api/1c/exchange', express.raw({ type: '*/*', limit: '50mb' }));
 
@@ -120,7 +135,9 @@ async function startServer() {
     } catch (err) {
       console.error('--- DETAILED S3 UPLOAD ERROR ---');
       console.error('Key:', key);
-      console.error('Error details:', err);
+      const errorMsg = `S3 Upload Error for ${key}: ${err instanceof Error ? err.message : String(err)}`;
+      console.error(errorMsg);
+      logError(errorMsg, '/api/1c/exchange');
       throw err; // Пробрасываем ошибку дальше в обработчик
     }
   }
