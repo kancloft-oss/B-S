@@ -6,8 +6,10 @@ import { fileURLToPath } from 'url';
 import multer from 'multer';
 import { db, initializeDatabase } from './server/db.js';
 import { uploadToS3 } from './src/services/s3Service.js';
+import { CommerceMLParser } from './src/services/commerceMLParser.js';
 
 const upload = multer({ storage: multer.memoryStorage() });
+const commerceMLParser = new CommerceMLParser();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -54,7 +56,33 @@ async function startServer() {
     }
   });
 
-  // ================= API PRODUCTS =================
+  // ================= API 1C EXCHANGE =================
+  app.post('/api/1c/exchange', async (req, res) => {
+    try {
+      const type = req.query.type;
+      const mode = req.query.mode;
+
+      console.log(`1C Exchange request: type=${type}, mode=${mode}`);
+
+      if (type === 'catalog' && mode === 'checkauth') {
+        return res.send('success\nkey\nvalue');
+      }
+      
+      if (type === 'catalog' && mode === 'init') {
+        return res.send('zip=no\nfile_limit=5000000');
+      }
+
+      if (type === 'catalog' && mode === 'file') {
+        const xmlData = req.body; 
+        return res.send('success');
+      }
+
+      res.send('success');
+    } catch (e) {
+      console.error('1C Exchange Error:', e);
+      res.status(500).send('failure\n' + (e as Error).message);
+    }
+  });
   app.get('/api/products', async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
