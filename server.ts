@@ -17,17 +17,25 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  // Added logging helper
-  const logError = (msg: string, path: string) => {
+  // Updated logging helper to handle info and errors
+  const logToServer = (msg: string, pathToFile: string, isError: boolean = true) => {
     try {
-      const data = fs.readFileSync('./logs.json', 'utf-8');
+      const logPath = path.resolve('./logs.json');
+      const data = fs.readFileSync(logPath, 'utf-8');
       const logs = data ? JSON.parse(data) : [];
-      logs.unshift({ id: Date.now(), type: 'error', message: msg, time: new Date().toLocaleTimeString(), path });
-      fs.writeFileSync('./logs.json', JSON.stringify(logs.slice(0, 50)));
+      logs.unshift({ 
+        id: Date.now(), 
+        type: isError ? 'error' : 'info', 
+        message: msg, 
+        time: new Date().toLocaleTimeString(), 
+        path: pathToFile 
+      });
+      fs.writeFileSync(logPath, JSON.stringify(logs.slice(0, 50)));
     } catch (e) {
-      console.error('Failed to log error:', e);
+      console.error('Failed to log to server:', e);
     }
   };
+
 
   app.use(cors());
   app.use(express.json({ limit: '50mb' }));
@@ -86,7 +94,8 @@ async function startServer() {
     try {
       const { type, mode, filename } = req.query;
 
-      console.log(`1C Exchange ${req.method} request: type=${type}, mode=${mode}, file=${filename}`);
+      const debugInfo = `Method: ${req.method}, Query: ${JSON.stringify(req.query)}, Body size: ${req.body?.length || 0}`;
+      logToServer(`1C Exchange request: ${debugInfo}`, '/api/1c/exchange', false);
 
       if (type === 'catalog' && mode === 'checkauth') {
         return res.send('success\nPHPSESSID\nsecretKey123');
@@ -140,12 +149,16 @@ async function startServer() {
         ACL: 'public-read'
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('--- DETAILED S3 UPLOAD ERROR ---');
       console.error('Key:', key);
-      const errorMsg = `S3 Upload Error for ${key}: ${err instanceof Error ? err.message : String(err)}. Check S3 logs.`;
+      console.error('Error Code:', err.code);
+      console.error('Error Name:', err.name);
+      console.error('Error Message:', err.message);
+      
+      const errorMsg = `S3 Upload Error for ${key}: ${err.name} - ${err.message}. Code: ${err.code || 'N/A'}`;
       console.error(errorMsg);
-      logError(errorMsg, '/api/1c/exchange');
+      logToServer(errorMsg, '/api/1c/exchange', true);
       throw err; // Пробрасываем ошибку дальше в обработчик
     }
   }
