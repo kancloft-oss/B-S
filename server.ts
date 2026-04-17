@@ -125,6 +125,8 @@ async function startServer() {
     });
 
     try {
+      console.log(`--- S3 UPLOAD ATTEMPT --- Bucket: ${process.env.S3_BUCKET_NAME || 'brusher-s3'}, Endpoint: ${process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru'}, Key: ${key}`);
+      
       await s3Client.send(new PutObjectCommand({
         Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
         Key: key,
@@ -132,10 +134,11 @@ async function startServer() {
         ContentType: contentType,
         ACL: 'public-read'
       }));
+      console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err) {
       console.error('--- DETAILED S3 UPLOAD ERROR ---');
       console.error('Key:', key);
-      const errorMsg = `S3 Upload Error for ${key}: ${err instanceof Error ? err.message : String(err)}`;
+      const errorMsg = `S3 Upload Error for ${key}: ${err instanceof Error ? err.message : String(err)}. Check S3 logs.`;
       console.error(errorMsg);
       logError(errorMsg, '/api/1c/exchange');
       throw err; // Пробрасываем ошибку дальше в обработчик
