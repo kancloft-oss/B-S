@@ -93,6 +93,14 @@ async function startServer() {
         
         const now = new Date().toISOString();
         for (const p of products) {
+          
+          let productId = p.id;
+          if (!productId) {
+            const safeSku = (p.sku || '').toString().trim();
+            const safeName = (p.name || '').toString().trim();
+            productId = safeSku ? `sku-${safeSku}` : `name-${Buffer.from(safeName).toString('base64').substring(0, 32)}`;
+          }
+
           await client.query(`
             INSERT INTO products (id, name, sku, category, price, stock, description, image, "createdAt", "updatedAt")
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
@@ -100,7 +108,7 @@ async function startServer() {
             name = EXCLUDED.name, sku = EXCLUDED.sku, category = EXCLUDED.category, price = EXCLUDED.price, 
             stock = EXCLUDED.stock, description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
           `, [
-            p.id || Date.now().toString() + Math.random(),
+            productId,
             p.name,
             p.sku || '',
             p.category || 'Без категории',
