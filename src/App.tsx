@@ -18,7 +18,7 @@ import { Button } from "./components/ui/button";
 import { SearchBar } from "./components/SearchBar";
 import { seedDatabase } from "./lib/seed-data";
 import { useEffect, useState, useRef } from "react";
-import logo from "./logo.png";
+const logo = 'https://s3.twcstorage.ru/brusher-s3/banners/20b225f6-b8c0-4818-967f-733aa00ef6a9.webp';
 
 function AppContent() {
   const { cartCount } = useCart();
