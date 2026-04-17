@@ -33,35 +33,32 @@ export const productsData = [
 
 export async function seedDatabase() {
   try {
-    const productsRef = collection(db, "products");
-    console.log("Seeding database with initial products...");
+    console.log("Seeding Postgres database with initial products...");
     
-    // Check if products already exist to avoid unnecessary writes
-    const snapshot = await getDocs(productsRef);
-    if (!snapshot.empty) {
+    // Check if products already exist
+    const res = await fetch('/api/products?limit=1');
+    const existing = await res.json();
+    if (existing && existing.length > 0) {
       console.log("Database already has products, skipping seed.");
       return;
     }
 
-    const batch = writeBatch(db);
-    
-    productsData.forEach((product) => {
-      const docRef = doc(productsRef, product.id);
-      batch.set(docRef, product);
+    const importRes = await fetch('/api/products/import', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ products: productsData })
     });
     
-    await batch.commit();
-    console.log("Database seeded successfully!");
+    if (importRes.ok) {
+      console.log("Database seeded successfully!");
+      // reload page so they appear
+      window.location.reload();
+    } else {
+      console.error("Failed to seed database:", await importRes.text());
+    }
   } catch (error) {
-    const errInfo = {
-      error: error instanceof Error ? error.message : String(error),
-      auth: {
-        uid: auth.currentUser?.uid,
-        email: auth.currentUser?.email
-      },
-      operation: "seedDatabase",
-      path: "products"
-    };
-    console.error("Error seeding database:", JSON.stringify(errInfo));
+    console.error("Error seeding database:", error);
   }
 }

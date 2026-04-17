@@ -22,7 +22,11 @@ async function startServer() {
       await db.query('SELECT 1');
       res.json({ status: 'ok', database: 'connected' });
     } catch (e) {
-      res.status(500).json({ status: 'error', message: (e as Error).message });
+      if ((e as Error).message.includes('authentication failed') || (e as Error).message.includes('password')) {
+        res.status(500).json({ error: 'DB_AUTH_FAILED', message: 'Неверный логин или пароль к базе данных' });
+      } else {
+        res.status(500).json({ status: 'error', message: (e as Error).message });
+      }
     }
   });
 
@@ -59,8 +63,12 @@ async function startServer() {
 
       const result = await db.query(query, params);
       res.json(result.rows);
-    } catch (e) {
-      res.status(500).json({ error: (e as Error).message });
+    } catch (e: any) {
+      if (e.message?.includes('authentication failed') || e.message?.includes('password')) {
+        res.status(500).json({ error: 'DB_AUTH_FAILED', message: 'Неверный пароль к базе данных (DATABASE_URL недостоверен)' });
+      } else {
+        res.status(500).json({ error: e.message });
+      }
     }
   });
 

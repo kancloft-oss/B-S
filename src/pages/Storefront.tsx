@@ -52,7 +52,10 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         }
 
         const productsRes = await fetch(productsUrl);
-        if (!productsRes.ok) throw new Error('Fetch products failed');
+        if (!productsRes.ok) {
+          const text = await productsRes.text();
+          throw new Error(text.includes('DB_AUTH_FAILED') ? 'DB_AUTH_FAILED' : 'Fetch products failed: ' + text);
+        }
         const productsData = await productsRes.json();
         setProducts(productsData);
 
@@ -72,10 +75,17 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         setCategories(categoriesData.length > 0 ? categoriesData : CATEGORIES_DATA);
       } catch (error: any) {
         console.error("Error fetching data:", error);
+        
+        // Handle specific server-sent error payloads if possible
+        if (error.message?.includes("DB_AUTH_FAILED")) {
+           setError("ОШИБКА АВТОРИЗАЦИИ БД: Ваш пароль или логин к базе данных неверен. Проверьте переменную DATABASE_URL.");
+           return;
+        }
+
         if (error.message?.includes("Quota exceeded") || error.code === "resource-exhausted") {
           setError("Превышен лимит запросов к базе данных (Quota Exceeded). Лимиты обновятся через некоторое время. Пожалуйста, попробуйте позже.");
         } else {
-          setError("Ошибка при загрузке данных. Пожалуйста, проверьте соединение.");
+          setError("Ошибка при загрузке данных: " + (error.message || "проверьте соединение с базой данных."));
         }
       } finally {
         setLoading(false);

@@ -47,11 +47,9 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    // Only seed if the user is authenticated via Firebase as the admin
-    if (user?.email === 'kancloft@gmail.com') {
-      seedDatabase();
-    }
-  }, [user]);
+    // Populate the database via the API if it's currently empty
+    seedDatabase();
+  }, []);
   
   if (isAdminPage) {
     return (
