@@ -4,6 +4,7 @@ import { createServer as createViteServer } from 'vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { db, initializeDatabase } from './server/db.js';
 import { uploadToS3 } from './src/services/s3Service.js';
 import { CommerceMLParser } from './src/services/commerceMLParser.js';
@@ -58,10 +59,6 @@ async function startServer() {
     }
   });
 
-  import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-// ... (imports)
-
-// ... existing code ...
 
   // ================= API 1C EXCHANGE =================
   // 1С часто использует GET для проверки соединения и инициализации
