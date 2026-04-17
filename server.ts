@@ -76,20 +76,23 @@ async function startServer() {
       }
 
       if (type === 'catalog' && mode === 'file' && req.method === 'POST') {
-        const fs = await import('fs');
-        const path = await import('path');
-        const fileName = req.query.filename ? String(req.query.filename) : `import_${Date.now()}.xml`;
-        const dir = path.join(process.cwd(), 'import_data');
-        const filePath = path.join(dir, fileName);
-        
-        await fs.promises.mkdir(dir, { recursive: true });
-        
-        // Если это файл (картинка или часть XML), пишем его как бинарные данные
-        await fs.promises.writeFile(filePath, req.body);
-        
-        console.log(`--- SAVED 1C FILE TO ${filePath} ---`);
-        
-        return res.send('success');
+        try {
+          const xmlData = req.body.toString();
+          
+          // Парсим данные прямо из памяти
+          console.log('--- PROCESSING 1C DATA IN MEMORY ---');
+          const parsedData = commerceMLParser.parse(xmlData);
+          
+          // Логируем результат парсинга, чтобы увидеть структуру
+          console.log('--- PARSING SUCCESSFUL ---');
+          // Ограничим вывод, чтобы не засорять логи при больших объемах
+          console.log(JSON.stringify(parsedData).substring(0, 1000));
+          
+          return res.send('success');
+        } catch (e) {
+          console.error('Parsing Error:', e);
+          return res.status(500).send('failure\nParsing error');
+        }
       }
 
       res.send('success');
