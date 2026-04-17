@@ -108,7 +108,8 @@ async function startServer() {
       // Если 1С отправляет файл (POST), перенаправляем его прямо в S3
       if (type === 'catalog' && mode === 'file' && req.method === 'POST' && filename) {
         try {
-          const fileKey = filename;
+          // Заменяем слеши на подчеркивания, чтобы избежать ошибки создания папок
+          const fileKey = filename.replace(/\//g, '_');
           
           // Всегда используем application/octet-stream для надежности бинарной передачи
           await uploadRawToS3(req.body, fileKey, 'application/octet-stream');
@@ -130,37 +131,39 @@ async function startServer() {
 
   // Helper for 1C raw upload
   async function uploadRawToS3(buffer: Buffer, key: string, contentType: string) {
+    const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
+    // Пробуем префиксный стиль: bucket.s3.twcstorage.ru
+    const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
+    
+    console.log(`--- S3 CONNECTION CONFIG ---`);
+    console.log(`Endpoint: ${endpoint}`);
+    console.log(`Bucket: ${bucket}`);
+    console.log(`Key: ${key}`);
+
     const s3Client = new S3Client({
-      endpoint: process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru',
+      endpoint: endpoint,
       region: process.env.S3_REGION || 'ru-1',
       credentials: {
         accessKeyId: process.env.S3_ACCESS_KEY || '',
         secretAccessKey: process.env.S3_SECRET_KEY || ''
       },
-      // Ensure we use path-style addressing if necessary
-      forcePathStyle: true, 
+      forcePathStyle: false // Отключаем PathStyle для проверки
     });
 
     try {
-      console.log(`--- S3 UPLOAD ATTEMPT --- Bucket: ${process.env.S3_BUCKET_NAME || 'brusher-s3'}, Key: ${key}, Size: ${buffer.length}`);
-      
       await s3Client.send(new PutObjectCommand({
-        Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
+        Bucket: bucket,
         Key: key,
         Body: buffer
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
       console.error('--- DETAILED S3 UPLOAD ERROR ---');
-      console.error('Key:', key);
-      console.error('Error Code:', err.code);
-      console.error('Error Name:', err.name);
-      console.error('Error Message:', err.message);
+      console.error('Error:', err);
       
-      const errorMsg = `S3 Upload Error for ${key}: ${err.name} - ${err.message}. Code: ${err.code || 'N/A'}`;
-      console.error(errorMsg);
+      const errorMsg = `S3 Upload Error for ${key}: ${err.name} - ${err.message}.`;
       logToServer(errorMsg, '/api/1c/exchange', true);
-      throw err; // Пробрасываем ошибку дальше в обработчик
+      throw err;
     }
   }
 
