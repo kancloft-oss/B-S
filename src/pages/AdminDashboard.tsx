@@ -1175,7 +1175,10 @@ function Import1CView() {
           body: JSON.stringify({ products: payload })
         });
         
-        if (!res.ok) throw new Error('Ошибка сети при загрузке чанка');
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(`Ошибка сети при загрузке чанка: ${text}`);
+        }
         
         processedCount += chunk.length;
         setProgress(Math.round((processedCount / jsonData.length) * 100));
