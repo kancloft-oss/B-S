@@ -142,10 +142,8 @@ async function startServer() {
         accessKeyId: process.env.S3_ACCESS_KEY || '',
         secretAccessKey: process.env.S3_SECRET_KEY || ''
       },
-      forcePathStyle: false 
+      forcePathStyle: true // Возвращаем обязательно
     });
-
-    console.log(`--- ATTEMPTING STREAMING UPLOAD TO S3 --- Bucket: ${bucket}, Key: ${key}`);
 
     try {
       await s3Client.send(new PutObjectCommand({
@@ -156,8 +154,8 @@ async function startServer() {
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
-      console.error('--- S3 UPLOAD ERROR ---', err);
-      throw err;
+      console.error('--- S3 STREAMING UPLOAD ERROR ---', err);
+      throw err; // Пробрасываем для обработки в API-эндпоинте
     }
   }
 
