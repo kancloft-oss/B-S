@@ -77,14 +77,16 @@ async function startServer() {
       if (type === 'catalog' && mode === 'file' && req.method === 'POST') {
         const fs = await import('fs');
         const path = await import('path');
-        const fileName = `import_${Date.now()}.xml`;
-        const filePath = path.join(process.cwd(), 'import_data', fileName);
+        const fileName = req.query.filename ? String(req.query.filename) : `import_${Date.now()}.xml`;
+        const dir = path.join(process.cwd(), 'import_data');
+        const filePath = path.join(dir, fileName);
         
-        // В продакшене лучше использовать fs.promises.writeFile
-        await fs.promises.mkdir(path.join(process.cwd(), 'import_data'), { recursive: true });
+        await fs.promises.mkdir(dir, { recursive: true });
+        
+        // Если это файл (картинка или часть XML), пишем его как бинарные данные
         await fs.promises.writeFile(filePath, req.body);
         
-        console.log(`--- SAVED 1C DATA TO ${filePath} ---`);
+        console.log(`--- SAVED 1C FILE TO ${filePath} ---`);
         
         return res.send('success');
       }
