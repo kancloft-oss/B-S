@@ -109,13 +109,20 @@ async function startServer() {
       }
     });
 
-    await s3Client.send(new PutObjectCommand({
-      Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-      ACL: 'public-read'
-    }));
+    try {
+      await s3Client.send(new PutObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME || 'brusher-s3',
+        Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        ACL: 'public-read'
+      }));
+    } catch (err) {
+      console.error('--- DETAILED S3 UPLOAD ERROR ---');
+      console.error('Key:', key);
+      console.error('Error details:', err);
+      throw err; // Пробрасываем ошибку дальше в обработчик
+    }
   }
 
   app.get('/api/products', async (req, res) => {
