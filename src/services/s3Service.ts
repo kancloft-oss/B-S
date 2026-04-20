@@ -11,7 +11,8 @@ const s3Config = {
   credentials: {
     accessKeyId: process.env.S3_ACCESS_KEY || '',
     secretAccessKey: process.env.S3_SECRET_KEY || ''
-  }
+  },
+  forcePathStyle: true
 };
 
 const s3Client = new S3Client(s3Config);
@@ -28,16 +29,12 @@ export async function downloadFromS3(key: string): Promise<string> {
 
   const response = await s3Client.send(command);
   
-  // Получаем тело ответа как Readable stream и преобразуем в строку
-  const streamToBuffer = (stream: any) => new Promise<Buffer>((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    stream.on('data', (chunk: Buffer) => chunks.push(chunk));
-    stream.on('error', reject);
-    stream.on('end', () => resolve(Buffer.concat(chunks)));
-  });
+  if (!response.Body) {
+    throw new Error('S3 Response Body is empty');
+  }
 
-  const buffer = await streamToBuffer(response.Body);
-  return buffer.toString('utf-8');
+  // AWS SDK v3 provides transformToString for Node streams natively
+  return await response.Body.transformToString('utf-8');
 }
 
 /**
