@@ -31,6 +31,8 @@ function AppContent() {
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const lastScrollY = useRef(0);
 
+  const [categories, setCategories] = useState<{id: string, name: string, parentId: string|null}[]>([]);
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -49,6 +51,14 @@ function AppContent() {
   useEffect(() => {
     // Populate the database via the API if it's currently empty
     seedDatabase();
+    
+    // Fetch categories for the header
+    fetch('/api/categories')
+      .then(res => res.json())
+      .then(data => {
+        if(Array.isArray(data)) setCategories(data);
+      })
+      .catch(e => console.error(e));
   }, []);
   
   if (isAdminPage) {
@@ -155,15 +165,11 @@ function AppContent() {
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-12 text-[13px] font-medium">
           <div className="flex items-center gap-6 overflow-x-auto no-scrollbar">
             <Link to="/promos" className="text-brand-red flex items-center gap-1 shrink-0"><Percent className="w-4 h-4" /> Акции</Link>
-            <Link to="/category/Инструмент" className="hover:text-brand-red transition-colors shrink-0">Инструмент</Link>
-            <Link to="/category/Крепеж" className="hover:text-brand-red transition-colors shrink-0">Крепеж</Link>
-            <Link to="/category/Всё для сада" className="hover:text-brand-red transition-colors shrink-0">Всё для сада</Link>
-            <Link to="/category/Электрика" className="hover:text-brand-red transition-colors shrink-0">Электрика</Link>
-            <Link to="/category/Силовая техника" className="hover:text-brand-red transition-colors shrink-0">Силовая техника</Link>
-            <Link to="/category/Станки" className="hover:text-brand-red transition-colors shrink-0">Станки</Link>
-            <Link to="/category/Спецодежда и СИЗ" className="hover:text-brand-red transition-colors shrink-0">Спецодежда и СИЗ</Link>
-            <Link to="/category/Сантехника" className="hover:text-brand-red transition-colors shrink-0">Сантехника</Link>
-            <Link to="/category/Авто" className="hover:text-brand-red transition-colors shrink-0">Авто</Link>
+            {categories.filter(c => !c.parentId).slice(0, 8).map(c => (
+              <Link key={c.id} to={`/category/${c.name}`} className="hover:text-brand-red transition-colors shrink-0">
+                {c.name}
+              </Link>
+            ))}
           </div>
           <Button variant="outline" size="sm" className="h-8 px-3 bg-brand-gray border-none text-zinc-900 font-bold text-[12px] rounded-md flex items-center gap-2">
             <Briefcase className="w-4 h-4" /> Для юрлиц

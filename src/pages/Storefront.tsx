@@ -29,7 +29,9 @@ const SORT_OPTIONS = [
 
 export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" | "category_products" | "cart" | "checkout" }) {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<{name: string, icon: any, image: string}[]>([]);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<{name: string, icon: any, image: string, id?: string}[]>([]);
+  const [activeCatalogCategory, setActiveCatalogCategory] = useState<string | null>(null);
   const { name: categoryParam } = useParams<{ name: string }>();
   const [sortBy, setSortBy] = useState("popular");
   const [isSortOpen, setIsSortOpen] = useState(false);
@@ -76,7 +78,11 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         
         // Use only parent categories for the top-level display
         const parentCategories = categoriesData.filter((c: any) => !c.parentId);
+        setAllCategories(categoriesData);
         setCategories(parentCategories.length > 0 ? parentCategories : CATEGORIES_DATA);
+        if (parentCategories.length > 0) {
+            setActiveCatalogCategory(parentCategories[0].id);
+        }
       } catch (error: any) {
         console.error("Error fetching data:", error);
         
@@ -462,30 +468,133 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
   }
 
   if (view === "catalog_list") {
+    // Generate hierarchical data
+    const parents = categories;
+    const activeParent = parents.find(c => c.id === activeCatalogCategory) || parents[0];
+    const subCategories = activeParent ? allCategories.filter(c => c.parentId === activeParent.id) : [];
+
     return (
-      <div className="max-w-3xl mx-auto px-0 md:px-4 py-0 md:py-6 pb-24 bg-white min-h-screen">
+      <div className="max-w-7xl mx-auto px-0 md:px-4 py-0 md:py-6 pb-24 bg-white min-h-screen">
         <div className="hidden md:flex items-center gap-3 mb-6">
-          <h1 className="text-3xl font-bold">Каталог</h1>
+          <h1 className="text-3xl font-bold text-zinc-900">Каталог товаров</h1>
         </div>
         
-        <div className="flex flex-col">
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            return (
-              <Link 
-                key={cat.name}
-                to={`/category/${cat.name}`}
-                className="flex items-center justify-between p-4 border-b border-brand-border hover:bg-zinc-50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <Icon className="w-6 h-6 text-brand-red" />
-                  <span className="font-medium text-zinc-900">{cat.name}</span>
-                </div>
-                <ChevronRight className="w-5 h-5 text-zinc-400" />
-              </Link>
-            );
-          })}
-        </div>
+        {parents.length === 0 ? (
+           <div className="text-center py-20 bg-white rounded-md border border-brand-border m-4 md:m-0">
+             <Package className="w-12 h-12 text-zinc-300 mx-auto mb-4" />
+             <h3 className="text-lg font-medium text-zinc-900 mb-2">Каталог пуст</h3>
+             <p className="text-zinc-500">Загрузите товары из 1С</p>
+           </div>
+        ) : (
+          <div className="flex flex-col md:flex-row md:border md:border-brand-border md:rounded-xl overflow-hidden bg-white md:min-h-[600px]">
+            {/* Desktop Left Sidebar */}
+            <div className="hidden md:block w-1/3 lg:w-1/4 border-r border-brand-border bg-zinc-50 overflow-y-auto">
+              {parents.map((cat) => {
+                const Icon = cat.icon || Package;
+                const isActive = activeCatalogCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id || cat.name}
+                    onMouseEnter={() => setActiveCatalogCategory(cat.id!)}
+                    onClick={() => setActiveCatalogCategory(cat.id!)}
+                    className={`w-full text-left flex items-center justify-between p-4 border-b border-brand-border transition-colors ${isActive ? 'bg-white font-bold text-brand-red border-l-4 border-l-brand-red -ml-[1px]' : 'hover:bg-zinc-100 text-zinc-900'}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-brand-red' : 'text-zinc-400'}`} />
+                      <span className="text-sm">{cat.name}</span>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 ${isActive ? 'text-brand-red' : 'text-zinc-300'}`} />
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Desktop Right Panel (Subcategories) */}
+            <div className="hidden md:block w-2/3 lg:w-3/4 p-8 bg-white overflow-y-auto">
+              {activeParent && (
+                <>
+                  <div className="flex items-center justify-between border-b border-brand-border pb-4 mb-6">
+                    <h2 className="text-2xl font-bold text-zinc-900 flex items-center gap-3">
+                      {activeParent.name}
+                    </h2>
+                    <Link to={`/category/${activeParent.name}`} className="text-brand-red hover:text-brand-red-hover font-bold text-sm bg-brand-red/10 px-4 py-2 rounded-md">
+                      Смотреть все товары
+                    </Link>
+                  </div>
+                  
+                  {subCategories.length > 0 ? (
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                      {subCategories.map(sub => (
+                        <Link 
+                          key={sub.id} 
+                          to={`/category/${sub.name}`}
+                          className="p-4 rounded-xl border border-brand-border hover:border-brand-red hover:shadow-md transition-all group flex flex-col justify-between min-h-[100px]"
+                        >
+                          <span className="font-bold text-zinc-900 group-hover:text-brand-red transition-colors text-sm line-clamp-2">{sub.name}</span>
+                          <span className="text-zinc-400 text-xs mt-2 group-hover:text-brand-red flex items-center gap-1">Выбрать <ArrowRight className="w-3 h-3" /></span>
+                        </Link>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-zinc-500 text-sm">В этой группе нет подгрупп.</div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* Mobile Accordion View */}
+            <div className="md:hidden flex flex-col w-full">
+              {parents.map((cat) => {
+                const Icon = cat.icon || Package;
+                const isActive = activeCatalogCategory === cat.id;
+                const catSubCategories = allCategories.filter(c => c.parentId === cat.id);
+                
+                return (
+                  <div key={cat.id || cat.name} className="border-b border-brand-border bg-white">
+                    <button
+                      onClick={() => setActiveCatalogCategory(isActive ? null : cat.id!)}
+                      className={`w-full text-left flex items-center justify-between p-4 transition-colors ${isActive ? 'bg-zinc-50 text-brand-red' : 'text-zinc-900'}`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <Icon className={`w-6 h-6 ${isActive ? 'text-brand-red' : 'text-zinc-400'}`} />
+                        <span className="font-medium">{cat.name}</span>
+                      </div>
+                      <ChevronRight className={`w-5 h-5 transition-transform duration-200 ${isActive ? 'rotate-90 text-brand-red' : 'text-zinc-400'}`} />
+                    </button>
+                    
+                    {/* Mobile Subcategories Dropdown */}
+                    {isActive && (
+                      <div className="bg-zinc-50 px-4 py-2 border-t border-brand-border shadow-inner">
+                         <Link 
+                            to={`/category/${cat.name}`}
+                            className="block py-3 px-4 mb-2 text-sm font-bold text-white bg-brand-red rounded-lg text-center shadow-sm"
+                          >
+                            Показать все ({cat.name})
+                          </Link>
+                         {catSubCategories.length > 0 ? (
+                           <div className="flex flex-col">
+                             {catSubCategories.map(sub => (
+                               <Link 
+                                 key={sub.id} 
+                                 to={`/category/${sub.name}`}
+                                 className="py-3 px-4 border-b border-zinc-200 last:border-0 text-zinc-700 text-sm hover:text-brand-red font-medium flex items-center justify-between"
+                               >
+                                 {sub.name}
+                                 <ChevronRight className="w-4 h-4 text-zinc-300" />
+                               </Link>
+                             ))}
+                           </div>
+                         ) : (
+                           <div className="text-zinc-500 text-sm py-2 px-4 text-center">Нет подгрупп</div>
+                         )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     );
   }

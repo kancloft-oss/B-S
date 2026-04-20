@@ -16,17 +16,23 @@ productsRouter.get('/', async (req, res) => {
       let paramCount = 1;
 
       if (category) {
-        // Find if this is a parent category and get its child category names
-        const catRes = await db.query('SELECT name FROM categories WHERE "parentId" = (SELECT id FROM categories WHERE name = $1 LIMIT 1)', [category]);
-        if (catRes.rows.length > 0) {
-           const subCats = catRes.rows.map(r => r.name);
-           const placeholders = subCats.map((_, i) => `$${paramCount + i + 1}`);
-           conditions.push(`"categoryId" IN ($${paramCount}, ${placeholders.join(', ')})`);
-           params.push(category, ...subCats);
-           paramCount += 1 + subCats.length;
+        // Find the requested category by name to get its exact ID
+        const targetRes = await db.query('SELECT id FROM categories WHERE name = $1 LIMIT 1', [category]);
+        if (targetRes.rows.length > 0) {
+            const targetId = targetRes.rows[0].id;
+            // Get all children categories IDs (if any)
+            const subRes = await db.query('SELECT id FROM categories WHERE "parentId" = $1', [targetId]);
+            const subCatIds = subRes.rows.map(r => r.id);
+            const allIds = [targetId, ...subCatIds];
+            
+            const placeholders = allIds.map((_, i) => `$${paramCount + i}`);
+            conditions.push(`"categoryId" IN (${placeholders.join(', ')})`);
+            params.push(...allIds);
+            paramCount += allIds.length;
         } else {
-           conditions.push(`"categoryId" = $${paramCount++}`);
-           params.push(category);
+            // Fallback if category name isn't found in DB (might happen with hardcoded links before sync)
+            conditions.push(`"categoryId" = $${paramCount++}`);
+            params.push(category);
         }
       }
       
