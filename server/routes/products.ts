@@ -21,11 +21,11 @@ productsRouter.get('/', async (req, res) => {
         if (catRes.rows.length > 0) {
            const subCats = catRes.rows.map(r => r.name);
            const placeholders = subCats.map((_, i) => `$${paramCount + i + 1}`);
-           conditions.push(`category IN ($${paramCount}, ${placeholders.join(', ')})`);
+           conditions.push(`"categoryId" IN ($${paramCount}, ${placeholders.join(', ')})`);
            params.push(category, ...subCats);
            paramCount += 1 + subCats.length;
         } else {
-           conditions.push(`category = $${paramCount++}`);
+           conditions.push(`"categoryId" = $${paramCount++}`);
            params.push(category);
         }
       }
@@ -100,17 +100,20 @@ productsRouter.get('/', async (req, res) => {
           }
 
           await client.query(`
-            INSERT INTO products (id, name, sku, category, price, stock, description, image, "createdAt", "updatedAt")
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO products (id, name, sku, barcode, "categoryId", price, "purchasePrice", stock, description, image, "createdAt", "updatedAt")
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             ON CONFLICT (id) DO UPDATE SET
-            name = EXCLUDED.name, sku = EXCLUDED.sku, category = EXCLUDED.category, price = EXCLUDED.price, 
-            stock = EXCLUDED.stock, description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
+            name = EXCLUDED.name, sku = EXCLUDED.sku, barcode = EXCLUDED.barcode, "categoryId" = EXCLUDED."categoryId", 
+            price = EXCLUDED.price, "purchasePrice" = EXCLUDED."purchasePrice", stock = EXCLUDED.stock, 
+            description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
           `, [
             productId,
             p.name,
             p.sku || '',
+            p.barcode || '',
             p.category || 'Без категории',
             p.price || 0,
+            p.purchasePrice || 0,
             p.stock || 0,
             p.description || '',
             p.image || '',
@@ -131,15 +134,15 @@ productsRouter.get('/', async (req, res) => {
     }
   });
 
-  productsRouter.post('', async (req, res) => {
+  productsRouter.post('/', async (req, res) => {
     try {
       const p = req.body;
       const now = new Date().toISOString();
       const id = p.id || Date.now().toString();
       await db.query(`
-        INSERT INTO products (id, name, sku, category, price, stock, description, image, "createdAt", "updatedAt")
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-      `, [id, p.name, p.sku, p.category, p.price, p.stock, p.description, p.image, now, now]);
+        INSERT INTO products (id, name, sku, barcode, "categoryId", price, "purchasePrice", stock, description, image, "createdAt", "updatedAt")
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `, [id, p.name, p.sku || '', p.barcode || '', p.category, p.price || 0, p.purchasePrice || 0, p.stock || 0, p.description || '', p.image || '', now, now]);
       res.json({ id, ...p });
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
@@ -151,9 +154,9 @@ productsRouter.get('/', async (req, res) => {
       const p = req.body;
       const now = new Date().toISOString();
       await db.query(`
-        UPDATE products SET name = $1, sku = $2, category = $3, price = $4, stock = $5, description = $6, image = $7, "updatedAt" = $8
-        WHERE id = $9
-      `, [p.name, p.sku, p.category, p.price, p.stock, p.description, p.image, now, req.params.id]);
+        UPDATE products SET name = $1, sku = $2, barcode = $3, "categoryId" = $4, price = $5, "purchasePrice" = $6, stock = $7, description = $8, image = $9, "updatedAt" = $10
+        WHERE id = $11
+      `, [p.name, p.sku || '', p.barcode || '', p.category, p.price || 0, p.purchasePrice || 0, p.stock || 0, p.description || '', p.image || '', now, req.params.id]);
       res.json({ success: true });
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });

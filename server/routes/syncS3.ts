@@ -123,7 +123,7 @@ syncS3Router.post('/', async (req, res) => {
         let imageUrl = null;
         if (p.Картинка) {
             const firstImage = Array.isArray(p.Картинка) ? p.Картинка[0] : p.Картинка;
-            imageUrl = \`\${S3_BASE}/\${firstImage}\`;
+            imageUrl = `${S3_BASE}/${firstImage}`;
         }
 
         const sku = p.Артикул || '';
@@ -145,16 +145,16 @@ syncS3Router.post('/', async (req, res) => {
             ]);
             saved++;
             if (saved % 500 === 0) {
-               addLog(req, \`Сохранено \${saved} товаров из \${products.length}...\`);
+               addLog(req, `Сохранено ${saved} товаров из ${products.length}...`);
             }
         } catch (e) {
             console.error(`Failed to save product ${p.Ид}: `, e);
         }
     }
     
-    addLog(req, \`СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено \${saved} товаров.\`);
+    addLog(req, `СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено ${saved} товаров.`);
   } catch (e: any) {
-    addLog(req, \`ОШИБКА СИНХРОНИЗАЦИИ: \${e.message}\`);
+    addLog(req, `ОШИБКА СИНХРОНИЗАЦИИ: ${e.message}`);
     console.error('Import Error:', e);
   }
 });

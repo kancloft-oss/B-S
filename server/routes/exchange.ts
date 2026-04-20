@@ -26,10 +26,10 @@ export const exchangeRouter = express.Router();
       if (type === 'catalog' && mode === 'file' && req.method === 'POST' && filename) {
         try {
           // Заменяем слеши на подчеркивания, чтобы избежать ошибки создания папок
-          const fileKey = filename.replace(/\//g, '_');
+          const fileKey = (filename as string).replace(/\//g, '_');
           
           // Передаем поток (req) напрямую в S3
-          await uploadRawToS3(req, fileKey, 'application/octet-stream');
+          await uploadRawToS3(req, fileKey, 'application/octet-stream', req.headers['content-length'] as string);
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
@@ -48,7 +48,7 @@ export const exchangeRouter = express.Router();
 
   // Helper for 1C raw upload
   // Helper for 1C raw streaming upload
-  async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string) {
+  async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string, contentLengthStr?: string) {
     const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
     const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
     
@@ -68,7 +68,7 @@ export const exchangeRouter = express.Router();
         Key: key,
         Body: stream,
         ContentType: contentType,
-        ContentLength: parseInt(req.headers['content-length'] || '0') || undefined
+        ContentLength: parseInt(contentLengthStr || '0') || undefined
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
