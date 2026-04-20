@@ -6,14 +6,14 @@ import path from 'path';
 
 let s3ClientInstance: S3Client | null = null;
 
-function getS3Client() {
+function getS3Client(config?: { endpoint?: string, region?: string, accessKey?: string, secretKey?: string }) {
   if (!s3ClientInstance) {
     s3ClientInstance = new S3Client({
-      endpoint: process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru',
-      region: process.env.S3_REGION || 'ru-1',
+      endpoint: config?.endpoint || process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru',
+      region: config?.region || process.env.S3_REGION || 'ru-1',
       credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY || '',
-        secretAccessKey: process.env.S3_SECRET_KEY || ''
+        accessKeyId: config?.accessKey || process.env.S3_ACCESS_KEY || '',
+        secretAccessKey: config?.secretKey || process.env.S3_SECRET_KEY || ''
       },
       forcePathStyle: true
     });
@@ -21,20 +21,26 @@ function getS3Client() {
   return s3ClientInstance;
 }
 
-function getBucketName() {
-  return process.env.S3_BUCKET_NAME || 'brusher-s3';
+function getBucketName(bucket?: string) {
+  return bucket || process.env.S3_BUCKET_NAME || 'brusher-s3';
 }
 
 /**
  * Downloads a file from Timeweb Cloud S3
  */
-export async function downloadFromS3(key: string): Promise<string> {
+export async function downloadFromS3(key: string, config?: { endpoint: string, bucket: string, accessKey: string, secretKey: string }): Promise<string> {
   const command = new GetObjectCommand({
-    Bucket: getBucketName(),
+    Bucket: getBucketName(config?.bucket),
     Key: key,
   });
 
-  const response = await getS3Client().send(command);
+  const client = getS3Client(config ? {
+    endpoint: config.endpoint,
+    accessKey: config.accessKey,
+    secretKey: config.secretKey
+  } : undefined);
+  
+  const response = await client.send(command);
   
   if (!response.Body) {
     throw new Error('S3 Response Body is empty');
