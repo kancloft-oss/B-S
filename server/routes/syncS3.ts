@@ -320,13 +320,12 @@ syncS3Router.post('/', async (req, res) => {
             addLog(req, `Сохранено ${saved} товаров из ${products.length}...`);
         }
         addLog(req, `СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено ${saved} товаров.`);
-    
-    addLog(req, `СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено ${saved} товаров.`);
-  } catch (e: any) {
+    } catch (e: any) {
     const errorMsg = e.name === 'UnknownError' && e.$metadata?.httpStatusCode === 404 
       ? 'Файлы не найдены в S3 (404)! Убедитесь, что файлы лежат в папке /1C/ (например, 1C/import.xml).' 
-      : `${e.name}: ${e.message} ${e.$metadata ? `(HTTP ${e.$metadata.httpStatusCode})` : ''} - (endpoint: ${process.env.S3_ENDPOINT}, bucket: ${process.env.S3_BUCKET_NAME})`;
+      : `${e.name}: ${e.message} ${e.$metadata ? `(HTTP ${e.$metadata.httpStatusCode})` : ''} - (endpoint: ${config.endpoint}, bucket: ${config.bucket})`;
     addLog(req, `ОШИБКА СИНХРОНИЗАЦИИ: ${errorMsg}`);
     console.error('Import Error:', e);
   }
+  })(S3_CONFIG);
 });
