@@ -28,6 +28,7 @@ const addLog = (req: any, msg: string) => {
 
 syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 1 }, { name: 'offersFile', maxCount: 1 }]), async (req: express.Request, res: express.Response) => {
     addLog(req, '--- ЛОКАЛЬНАЯ ЗАГРУЗКА 1С XML ЗАПУЩЕНА ---');
+    const S3_BASE = `${process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru'}/${process.env.S3_BUCKET_NAME || 'brusher-s3'}/1C`;
     
     try {
         const files = req.files as { [fieldname: string]: Express.Multer.File[] };
@@ -45,14 +46,14 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                 addLog(req, 'Чтение загруженного import.xml...');
                 const importXmlStr = files.importFile[0].buffer.toString('utf-8');
                 const importData = parser.parse(importXmlStr);
-                const catalog = importData.КоммерческаяИнформация?.Классификатор;
+                const catalog = importData.КоммерческаяИнформация?.Классификатор || importData.КоммерческаяИнформация;
 
                 if (!catalog) {
                     addLog(req, 'ОШИБКА: Неверный формат import.xml (не найден Классификатор)');
                     return;
                 }
 
-                const rawCategories = catalog.Группы?.Группа;
+                const rawCategories = catalog.Группы?.Группа || catalog.Классификатор?.Группы?.Группа;
                 const categories = Array.isArray(rawCategories) ? rawCategories : (rawCategories ? [rawCategories] : []);
                 
                 const categoriesToImport: any[] = [];
@@ -77,7 +78,7 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                 }
                 addLog(req, `Дерево категорий успешно сохранено.`);
 
-                const rawProducts = importData.КоммерческаяИнформация?.Каталог?.Товары?.Товар || catalog.Товары?.Товар || importData.КоммерческаяИнформация?.Товары?.Товар;
+                const rawProducts = catalog.Товары?.Товар || importData.КоммерческаяИнформация?.Каталог?.Товары?.Товар;
                 const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts ? [rawProducts] : []);
                 addLog(req, `Найдено товаров в import.xml: ${products.length}`);
 
@@ -104,7 +105,7 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                     const rawOffers = packageOffers?.Предложения?.Предложение;
                     const offers = Array.isArray(rawOffers) ? rawOffers : (rawOffers ? [rawOffers] : []);
                     offersMap = new Map(offers.map((o: any) => [o.Ид, o]));
-                    addLog(req, `Найдено предложений (цен/остатков) в offers.xml: ${offers.length}`);
+                    addLog(req, `Найдено предложений в offers.xml: ${offers.length}`);
                 } else {
                     addLog(req, 'Файл offers.xml не был загружен. Цены и остатки будут установлены в 0.');
                 }
@@ -114,7 +115,7 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                 const BATCH_SIZE = 50;
                 
                 for (let i = 0; i < products.length; i += BATCH_SIZE) {
-                    const batch = products.slice(i, i + BATCH_SIZE);
+                    const batch = products.slice(i, i += BATCH_SIZE); // Fixed increment
                     
                     await Promise.all(batch.map(async (p: any) => {
                         const offer = offersMap.get(p.Ид);
@@ -130,12 +131,7 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                         }
                         
                         const stock = parseFloat(offer?.Количество || '0');
-                        let categoryId = null;
-                        if (p.Группы && p.Группы.Ид) {
-                            categoryId = p.Группы.Ид;
-                        } else if (p.Категория) {
-                             categoryId = p.Категория;
-                        }
+                        let categoryId = p.Группы?.Ид || p.Категория || null;
 
                         let imageUrl = null;
                         if (p.Картинка) {
@@ -146,8 +142,7 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                         const sku = p.Артикул || '';
                         const barcode = p.Штрихкод ? String(p.Штрихкод) : '';
                         const name = p.Наименование || 'Без названия';
-                        const description = typeof p.Описание === 'string' ? p.Описание : '';
-                        const maxDescription = description.substring(0, 1000);
+                        const description = typeof p.Описание === 'string' ? p.Описание.substring(0, 1000) : '';
 
                         try {
                            await db.query(`
@@ -158,7 +153,7 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                                 price = EXCLUDED.price, "purchasePrice" = EXCLUDED."purchasePrice", stock = EXCLUDED.stock, 
                                 description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
                             `, [
-                               p.Ид, name, sku, barcode, categoryId, price, purchasePrice, stock, maxDescription, imageUrl, new Date().toISOString(), new Date().toISOString()
+                               p.Ид, name, sku, barcode, categoryId, price, purchasePrice, stock, description, imageUrl, new Date().toISOString(), new Date().toISOString()
                             ]);
                             saved++;
                         } catch (e) {
@@ -172,7 +167,7 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
                 addLog(req, `СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено ${saved} товаров.`);
 
              } catch (e: any) {
-                const errorMsg = `${e.name}: ${e.message}`;
+                const errorMsg = `${e.name || 'Error'}: ${e.message || String(e)}`;
                 addLog(req, `ОШИБКА ОБРАБОТКИ: ${errorMsg}`);
                 console.error('Local Upload Error:', e);
              }
@@ -184,14 +179,18 @@ syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 
 });
 
 syncS3Router.post('/', async (req, res) => {
-  // Run process in background, respond immediately
   res.json({ message: 'Синхронизация запущена в фоновом режиме', success: true });
   
-  try {
-    addLog(req, '--- СИНХРОНИЗАЦИЯ БАЗЫ ИЗ S3 ХРАНИЛИЩА ЗАПУЩЕНА ---');
-    const parser = new CommerceMLParser();
+  (async () => {
+    const S3_BASE = `${process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru'}/${process.env.S3_BUCKET_NAME || 'brusher-s3'}/1C`;
+    addLog(req, `--- АВТОМАТИЧЕСКАЯ СИНХРОНИЗАЦИЯ S3 ЗАПУЩЕНА ---`);
+    addLog(req, `Endpoint: ${process.env.S3_ENDPOINT}, bucket: ${process.env.S3_BUCKET_NAME}`);
     
-    addLog(req, 'Скачивание import.xml из S3...');
+    try {
+        addLog(req, '--- СИНХРОНИЗАЦИЯ БАЗЫ ИЗ S3 ХРАНИЛИЩА ЗАПУЩЕНА ---');
+        const parser = new CommerceMLParser();
+        
+        addLog(req, 'Скачивание import.xml из S3...');
     const importXml = await downloadFromS3('1C/import.xml');
     const importData = parser.parse(importXml);
     
