@@ -67,7 +67,60 @@ export default function Import1CView() {
     setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
   };
 
-  const handleImport = async () => {
+  const handleImportS3 = async () => {
+    setLoading(true);
+    setLogs([]);
+    setProgress(0);
+    addLog("Отправка команды на сервер: Инициирована синхронизация с S3 хранилищем...");
+    
+    try {
+      const res = await fetch('/api/1c/sync-s3', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error');
+      addLog(data.message);
+      
+      // Start polling logs.json to update progress
+      let interval = setInterval(async () => {
+         try {
+            const logsRes = await fetch('/api/logs');
+            if (logsRes.ok) {
+               const logsData = await logsRes.json();
+               // Update UI logs with only sync S3 related logs
+               const syncLogs = logsData.filter((l: any) => l.path === '/api/1c/sync-s3').map((l: any) => `[${l.time}] ${l.message}`);
+               if (syncLogs.length > 0) {
+                 setLogs(syncLogs);
+                 // Check if done
+                 if (syncLogs[0].includes("УСПЕШНО ЗАВЕРШЕНА") || syncLogs[0].includes("ОШИБКА СИНХРОНИЗАЦИИ")) {
+                    clearInterval(interval);
+                    setLoading(false);
+                    setProgress(100);
+                    fetchStats();
+                 } else {
+                    // Try to guess progress from count if it says "Сохранено X товаров из Y"
+                    const match = syncLogs[0].match(/Сохранено (\d+) товаров из (\d+)/);
+                    if (match) {
+                        const count = parseInt(match[1]);
+                        const total = parseInt(match[2]);
+                        setProgress(Math.round((count / total) * 100));
+                    } else if (syncLogs[0].includes("Скачивание offers.xml")) {
+                        setProgress(30);
+                    } else if (syncLogs[0].includes("Сохранено")) {
+                        setProgress(50);
+                    } else if (syncLogs[0].includes("Скачивание import.xml")) {
+                        setProgress(10);
+                    }
+                 }
+               }
+            }
+         } catch(e) {}
+      }, 2000);
+    } catch(e) {
+      addLog(`Ошибка запуска: ${e instanceof Error ? e.message : String(e)}`);
+      setLoading(false);
+    }
+  };
+
+  const handleImportExcel = async () => {
     if (!file) return;
     setLoading(true);
     setLogs([]);
@@ -96,7 +149,7 @@ export default function Import1CView() {
           price: Number(row['Розничная цена ₽']) || 0,
           stock: Number(row['Остаток']) || 0,
           sku: String(row['Артикул'] || row['Код'] || ''),
-          category: String(row['Категория'] || 'Без категории'),
+          category: String(row['Категория'] || 'Без категории'), // Categories strictly from file as requested!
           description: String(row['Описание'] || '')
         }));
         
@@ -116,7 +169,7 @@ export default function Import1CView() {
         addLog(`Отправлено ${processedCount} из ${jsonData.length} товаров...`);
       }
       
-      addLog("Обновление категорий...");
+      addLog("Обновление категорий согласно файлу...");
       const uniqueCats = new Set<string>();
       jsonData.forEach((row: any) => {
         const cat = row['Категория'];
@@ -124,44 +177,12 @@ export default function Import1CView() {
       });
       if (uniqueCats.size === 0) uniqueCats.add('Без категории');
 
-      const getParentCat = (catName: string) => {
-        const c = catName.toLowerCase();
-        if (c.includes('кист')) return 'Кисти';
-        if (c.includes('холст') || c.includes('подрамник')) return 'Холсты и подрамники';
-        if (c.includes('бумаг') || c.includes('картон') || c.includes('скетч') || c.includes('альбом') || c.includes('блокнот')) return 'Бумага и альбомы';
-        if (c.includes('краск') || c.includes('акварел') || c.includes('гуаш') || c.includes('акрил') || c.includes('масло') || c.includes('пигмент')) return 'Краски';
-        if (c.includes('карандаш')) return 'Карандаши';
-        if (c.includes('маркер') || c.includes('линер') || c.includes('фломастер') || c.includes('ручк')) return 'Маркеры, линеры и ручки';
-        if (c.includes('мольберт') || c.includes('этюдник') || c.includes('палитра')) return 'Мольберты и палитры';
-        if (c.includes('лак') || c.includes('клей') || c.includes('разбавитель') || c.includes('грунт')) return 'Химия, грунты и лаки';
-        return 'Прочие товары';
-      };
-
-      const parents = new Set<string>();
+      // Categories are flat mapped from Excel without grouping logic
       for (const cat of Array.from(uniqueCats)) {
-        const parent = getParentCat(cat);
-        if (parent) parents.add(parent);
-      }
-
-      // 1. Сначала создаем родительские категории
-      const parentIds: Record<string, string> = {};
-      for (const parent of Array.from(parents)) {
-        const res = await fetch('/api/categories', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: parent })
-        });
-        const data = await res.json();
-        parentIds[parent] = data.id;
-      }
-
-      // 2. Теперь создаем подкатегории с привязкой
-      for (const cat of Array.from(uniqueCats)) {
-        const parentName = getParentCat(cat);
         await fetch('/api/categories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name: cat, parentId: parentName ? parentIds[parentName] : null })
+          body: JSON.stringify({ name: cat, parentId: null })
         });
       }
 
@@ -181,33 +202,83 @@ export default function Import1CView() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Синхронизация с 1С</h2>
-        <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
-          Excel / CSV
-        </Badge>
+        <div className="flex gap-2">
+          <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
+            S3 XML
+          </Badge>
+          <Badge variant="outline" className="bg-zinc-50 text-zinc-600 border-zinc-200">
+            Excel / CSV
+          </Badge>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="border-none shadow-sm overflow-hidden">
-            <div className="h-2 bg-orange-500 w-full"></div>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <RefreshCcw className="w-5 h-5 text-orange-500" />
-                Загрузка данных
+          <Card className="border-none shadow-sm overflow-hidden relative">
+            <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-400 to-rose-500"></div>
+            <CardHeader className="pt-8">
+              <CardTitle className="flex items-center gap-2 text-xl">
+                <Database className="w-6 h-6 text-orange-500" />
+                Автоматическая синхронизация из S3 (XML)
               </CardTitle>
               <CardDescription>
-                Выберите файл Excel, экспортированный из 1С. Система автоматически сопоставит товары по Артикулу или Коду.
+                Запускает процесс глубокой синхронизации базы товаров из файлов import.xml и offers.xml, загруженных из 1С в облачное хранилище S3.
+                Иерархия категорий и цены будут перенесены 1-в-1.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="border-2 border-dashed border-zinc-200 rounded-3xl p-12 text-center space-y-4 hover:border-orange-300 transition-all bg-zinc-50/50 group">
-                <div className="bg-white w-20 h-20 rounded-2xl flex items-center justify-center mx-auto shadow-sm group-hover:scale-110 transition-transform">
-                  <Download className="w-10 h-10 text-orange-500" />
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-end">
+                  <div className="space-y-1">
+                     <p className="text-sm font-bold text-zinc-900">Прогресс S3 синхронизации</p>
+                     <p className="text-xs text-zinc-500">Логи транслируются в журнал событий в реальном времени</p>
+                  </div>
+                  <span className="text-3xl font-black text-orange-500">{progress}%</span>
                 </div>
-                <div>
-                  <p className="text-lg font-bold text-zinc-900">Перетащите файл выгрузки</p>
-                  <p className="text-sm text-zinc-500 mt-1">Поддерживаются форматы .xlsx, .xls, .csv</p>
+                <div className="w-full bg-zinc-100 h-4 rounded-full overflow-hidden shadow-inner">
+                  <div 
+                    className="bg-gradient-to-r from-orange-400 to-rose-500 h-full transition-all duration-700 ease-out relative" 
+                    style={{ width: `${progress}%` }}
+                  >
+                     <div className="absolute inset-0 bg-white/20 w-full animate-pulse"></div>
+                  </div>
                 </div>
+              </div>
+
+              <Button 
+                onClick={handleImportS3} 
+                disabled={loading} 
+                className="w-full h-16 text-lg bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-3">
+                    <RefreshCcw className="w-6 h-6 animate-spin" />
+                    Идет обмен с S3...
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Zap className="w-6 h-6 text-white" />
+                    Синхронизировать базу с S3
+                  </div>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Download className="w-5 h-5 text-zinc-500" />
+                Ручная загрузка (Excel / CSV)
+              </CardTitle>
+              <CardDescription>
+                Резервный способ. Загрузите выгрузку вручную, если S3 недоступно.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="border-2 border-dashed border-zinc-200 rounded-2xl p-6 text-center space-y-4 hover:border-zinc-300 transition-all bg-zinc-50/50 group">
                 <Input 
                   type="file" 
                   accept=".xlsx, .xls, .csv" 
@@ -216,50 +287,24 @@ export default function Import1CView() {
                   id="file-upload"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer">
-                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 border border-zinc-200 bg-white shadow-sm hover:bg-zinc-100 hover:text-zinc-900 h-12 px-8 rounded-xl">
-                    Выбрать файл на компьютере
+                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-10 px-6 rounded-lg shadow-sm">
+                    Выбрать Excel файл
                   </div>
                 </label>
                 {file && (
-                  <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-50 py-2 px-4 rounded-full w-fit mx-auto">
-                    <CheckCircle2 className="w-4 h-4" />
-                    {file.name}
+                  <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-600">
+                    <CheckCircle2 className="w-4 h-4" /> {file.name}
                   </div>
                 )}
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <p className="text-sm font-bold text-zinc-900">Прогресс обработки</p>
-                    <p className="text-xs text-zinc-500">Не закрывайте вкладку до завершения</p>
-                  </div>
-                  <span className="text-2xl font-black text-orange-500">{progress}%</span>
-                </div>
-                <div className="w-full bg-zinc-100 h-3 rounded-full overflow-hidden">
-                  <div 
-                    className="bg-orange-500 h-full transition-all duration-500 ease-out" 
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
               </div>
 
               <Button 
-                onClick={handleImport} 
+                onClick={handleImportExcel} 
                 disabled={!file || loading} 
-                className="w-full h-14 bg-zinc-900 hover:bg-zinc-800 text-white font-bold rounded-2xl shadow-xl shadow-zinc-200 transition-all active:scale-[0.98] disabled:opacity-50"
+                variant="outline"
+                className="w-full h-12 font-bold rounded-xl active:scale-[0.98] disabled:opacity-50"
               >
-                {loading ? (
-                  <div className="flex items-center gap-2">
-                    <RefreshCcw className="w-5 h-5 animate-spin" />
-                    Идет синхронизация...
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-5 h-5 text-orange-400" />
-                    Запустить обновление базы
-                  </div>
-                )}
+                Загрузить из Excel
               </Button>
             </CardContent>
           </Card>
@@ -272,7 +317,7 @@ export default function Import1CView() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-zinc-900 rounded-2xl p-6 font-mono text-[11px] text-zinc-400 h-80 overflow-y-auto space-y-2 custom-scrollbar">
+              <div className="bg-zinc-900 rounded-2xl p-6 font-mono text-[11px] text-zinc-400 h-96 overflow-y-auto space-y-2 custom-scrollbar">
                 {logs.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-2">
                     <Terminal className="w-8 h-8 opacity-20" />
@@ -280,9 +325,11 @@ export default function Import1CView() {
                   </div>
                 )}
                 {logs.map((log, i) => (
-                  <div key={i} className="flex gap-3 border-b border-zinc-800/50 pb-2 last:border-0">
-                    <span className="text-zinc-600 shrink-0">{log.split(']')[0]}]</span>
-                    <span className="text-zinc-300">{log.split(']')[1]}</span>
+                  <div key={i} className="flex gap-3 border-b border-zinc-800/50 pb-2 last:border-0 hover:bg-zinc-800/50 transition-colors">
+                    <span className="text-zinc-600 shrink-0">{log.includes(']') ? log.split(']')[0] + ']' : ''}</span>
+                    <span className={log.includes('ОШИБКА') ? 'text-red-400' : log.includes('УСПЕШНО') ? 'text-emerald-400' : 'text-zinc-300'}>
+                        {log.includes(']') ? log.split(']')[1] : log}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -291,22 +338,22 @@ export default function Import1CView() {
         </div>
 
         <div className="space-y-6">
-          <Card className="border-none shadow-sm bg-orange-500 text-white">
+          <Card className="border-none shadow-sm bg-zinc-900 text-white">
             <CardHeader>
-              <CardTitle className="text-lg">Инструкция</CardTitle>
+              <CardTitle className="text-lg flex gap-2 items-center"><Database className="w-5 h-5 text-orange-500"/> Инструкция S3</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm opacity-90">
+            <CardContent className="space-y-4 text-sm text-zinc-400">
               <div className="flex gap-3">
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 font-bold">1</div>
-                <p>Выгрузите из 1С отчет в формате Excel.</p>
+                <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 font-bold text-zinc-300">1</div>
+                <p>Выгрузите из 1С файлы <code className="text-orange-400">import.xml</code> и <code className="text-orange-400">offers.xml</code>, а также папку с картинками.</p>
               </div>
               <div className="flex gap-3">
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 font-bold">2</div>
-                <p>Убедитесь, что колонки называются как в примере (Артикул, Наименование, Цена и т.д.).</p>
+                <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 font-bold text-zinc-300">2</div>
+                <p>Загрузите их в ваше S3 хранилище (Timeweb) в корневую папку <code className="text-orange-400">/1C/</code>.</p>
               </div>
               <div className="flex gap-3">
-                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center shrink-0 font-bold">3</div>
-                <p>Загрузите файл здесь. Система сама обновит существующие товары и добавит новые.</p>
+                <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 font-bold text-zinc-300">3</div>
+                <p>Нажмите большую оранжевую кнопку «Синхронизировать базу с S3». Система сама скачает файлы и произведет обновление.</p>
               </div>
             </CardContent>
           </Card>

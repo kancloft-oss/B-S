@@ -1,24 +1,42 @@
-import { downloadFromS3 } from './src/services/s3Service.js';
-import { CommerceMLParser } from './src/services/commerceMLParser.js';
-import { db } from './server/db.js';
+import express from 'express';
+import { downloadFromS3 } from '../../src/services/s3Service.js';
+import { CommerceMLParser } from '../../src/services/commerceMLParser.js';
+import { db } from '../db.js';
+import fs from 'fs';
+import path from 'path';
 
-// Base S3 URL for 1C files (images)
+export const syncS3Router = express.Router();
+
 const S3_BASE = `${process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru'}/${process.env.S3_BUCKET_NAME || 'brusher-s3'}/1C`;
 
-async function importFromS3() {
-  console.log('--- STARTING IMPORT FROM 1C/S3 ---');
+const addLog = (req: any, msg: string) => {
+  console.log(msg);
   try {
+     const logPath = path.resolve('./logs.json');
+     let logs = [];
+     if(fs.existsSync(logPath)){
+       const data = fs.readFileSync(logPath, 'utf-8');
+       logs = data ? JSON.parse(data) : [];
+     }
+     logs.unshift({ id: Date.now(), type: 'info', message: msg, time: new Date().toLocaleTimeString(), path: '/api/1c/sync-s3' });
+     fs.writeFileSync(logPath, JSON.stringify(logs.slice(0, 50)));
+  } catch(e) {}
+};
+
+syncS3Router.post('/', async (req, res) => {
+  // Run process in background, respond immediately
+  res.json({ message: 'Синхронизация запущена в фоновом режиме', success: true });
+  
+  try {
+    addLog(req, '--- СИНХРОНИЗАЦИЯ БАЗЫ ИЗ S3 ХРАНИЛИЩА ЗАПУЩЕНА ---');
     const parser = new CommerceMLParser();
     
-    // ----------------------------------------------------
-    // 1. Download and Parse import.xml
-    // ----------------------------------------------------
-    console.log('Downloading import.xml...');
+    addLog(req, 'Скачивание import.xml из S3...');
     const importXml = await downloadFromS3('1C/import.xml');
     const importData = parser.parse(importXml);
     
     const catalog = importData?.КоммерческаяИнформация?.Каталог;
-    if (!catalog) throw new Error('Invalid import.xml format: Missing КоммерческаяИнформация.Каталог');
+    if (!catalog) throw new Error('Некорректный формат import.xml: Отсутствует КоммерческаяИнформация.Каталог');
 
     // Parse Categories
     const classifier = importData?.КоммерческаяИнформация?.Классификатор;
@@ -34,7 +52,6 @@ async function importFromS3() {
                 name: grp.Наименование,
                 parentId: parentId
             });
-            // Handle subcategories
             if (grp.Группы && grp.Группы.Группа) {
                 extractCategories(grp.Группы.Группа, grp.Ид);
             }
@@ -42,7 +59,7 @@ async function importFromS3() {
     }
     extractCategories(rawGroups);
 
-    console.log(`Found ${categoriesToImport.length} categories.`);
+    addLog(req, `Найдено категорий в файле: ${categoriesToImport.length}`);
     for (const cat of categoriesToImport) {
         await db.query(`
             INSERT INTO categories (id, "parentId", name) 
@@ -51,22 +68,17 @@ async function importFromS3() {
             "parentId" = EXCLUDED."parentId", name = EXCLUDED.name
         `, [cat.id, cat.parentId, cat.name]);
     }
+    addLog(req, `Дерево категорий успешно сохранено.`);
 
-    // Parse Products
     const rawProducts = catalog.Товары?.Товар;
     const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts ? [rawProducts] : []);
-    console.log(`Found ${products.length} products.`);
+    addLog(req, `Найдено товаров в import.xml: ${products.length}`);
 
-    // ----------------------------------------------------
-    // 2. Download and Parse offers.xml
-    // ----------------------------------------------------
-    console.log('Downloading offers.xml...');
+    addLog(req, 'Скачивание offers.xml из S3 (цены и остатки)...');
     const offersXml = await downloadFromS3('1C/offers.xml');
     const offersData = parser.parse(offersXml);
     
     const packageOffers = offersData?.КоммерческаяИнформация?.ПакетПредложений;
-    
-    // Map Price Types to identify Retail vs Purchase
     const rawPriceTypes = packageOffers?.ТипыЦен?.ТипЦены;
     const priceTypes = Array.isArray(rawPriceTypes) ? rawPriceTypes : (rawPriceTypes ? [rawPriceTypes] : []);
     
@@ -78,28 +90,20 @@ async function importFromS3() {
         if (name.includes('розничн')) retailPriceTypeId = pt.Ид;
         if (name.includes('закупочн')) purchasePriceTypeId = pt.Ид;
     }
-    // Fallback if exactly these words aren't used
     if (!retailPriceTypeId && priceTypes.length > 0) retailPriceTypeId = priceTypes[0].Ид; 
     
     const rawOffers = packageOffers?.Предложения?.Предложение;
     const offers = Array.isArray(rawOffers) ? rawOffers : (rawOffers ? [rawOffers] : []);
-    console.log(`Found ${offers.length} offers.`);
-
     const offersMap = new Map(offers.map(o => [o.Ид, o]));
 
-    // ----------------------------------------------------
-    // 3. Save Products to Database
-    // ----------------------------------------------------
-    console.log(`Saving products to database...`);
+    addLog(req, `Начинается сохранение товаров в базу данных...`);
     let saved = 0;
 
     for (const p of products) {
         const offer = offersMap.get(p.Ид);
-        
         let price = 0;
         let purchasePrice = 0;
         
-        // Extract Prices
         if (offer && offer.Цены && offer.Цены.Цена) {
             const prices = Array.isArray(offer.Цены.Цена) ? offer.Цены.Цена : [offer.Цены.Цена];
             for (const pr of prices) {
@@ -108,62 +112,49 @@ async function importFromS3() {
             }
         }
         
-        // Stock 
         const stock = parseFloat(offer?.Количество || '0');
-        
-        // Category 
         let categoryId = null;
         if (p.Группы && p.Группы.Ид) {
             categoryId = p.Группы.Ид;
         } else if (importData.Категория) {
-            // some 1C variants use plain Категория string, usually it's in Группы.Ид
              categoryId = p.Категория;
         }
 
-        // Image URL
         let imageUrl = null;
         if (p.Картинка) {
             const firstImage = Array.isArray(p.Картинка) ? p.Картинка[0] : p.Картинка;
-            imageUrl = `${S3_BASE}/${firstImage}`;
+            imageUrl = \`\${S3_BASE}/\${firstImage}\`;
         }
 
         const sku = p.Артикул || '';
         const barcode = p.Штрихкод ? String(p.Штрихкод) : '';
         const name = p.Наименование || 'Без названия';
         const description = typeof p.Описание === 'string' ? p.Описание : '';
-        const maxDescription = description.substring(0, 1000); // safety cap
+        const maxDescription = description.substring(0, 1000);
 
         try {
            await db.query(`
                 INSERT INTO products (id, name, sku, barcode, "categoryId", price, "purchasePrice", stock, description, image, "createdAt", "updatedAt")
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 ON CONFLICT (id) DO UPDATE SET
-                name = EXCLUDED.name, 
-                sku = EXCLUDED.sku,
-                barcode = EXCLUDED.barcode,
-                "categoryId" = EXCLUDED."categoryId",
-                price = EXCLUDED.price, 
-                "purchasePrice" = EXCLUDED."purchasePrice",
-                stock = EXCLUDED.stock, 
-                description = EXCLUDED.description,
-                image = EXCLUDED.image,
-                "updatedAt" = EXCLUDED."updatedAt"
+                name = EXCLUDED.name, sku = EXCLUDED.sku, barcode = EXCLUDED.barcode, "categoryId" = EXCLUDED."categoryId",
+                price = EXCLUDED.price, "purchasePrice" = EXCLUDED."purchasePrice", stock = EXCLUDED.stock, 
+                description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
             `, [
                p.Ид, name, sku, barcode, categoryId, price, purchasePrice, stock, maxDescription, imageUrl, new Date().toISOString(), new Date().toISOString()
             ]);
             saved++;
+            if (saved % 500 === 0) {
+               addLog(req, \`Сохранено \${saved} товаров из \${products.length}...\`);
+            }
         } catch (e) {
             console.error(`Failed to save product ${p.Ид}: `, e);
         }
     }
     
-    console.log(`Import successful! Saved ${saved} products to DB.`);
-    
-  } catch (e) {
+    addLog(req, \`СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено \${saved} товаров.\`);
+  } catch (e: any) {
+    addLog(req, \`ОШИБКА СИНХРОНИЗАЦИИ: \${e.message}\`);
     console.error('Import Error:', e);
-  } finally {
-     process.exit(0);
   }
-}
-
-importFromS3();
+});

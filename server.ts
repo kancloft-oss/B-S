@@ -13,6 +13,7 @@ import { categoriesRouter } from './server/routes/categories.js';
 import { ordersRouter } from './server/routes/orders.js';
 import { exchangeRouter } from './server/routes/exchange.js';
 import { statsRouter } from './server/routes/stats.js';
+import { syncS3Router } from './server/routes/syncS3.js';
 
 async function startServer() {
   await initializeDatabase();
@@ -49,6 +50,7 @@ async function startServer() {
   // --- Attach Routes ---
   app.use('/api/upload', uploadRouter);
   app.use('/api/1c/exchange', exchangeRouter);
+  app.use('/api/1c/sync-s3', syncS3Router);
   app.use('/api/products', productsRouter);
   app.use('/api/categories', categoriesRouter);
   app.use('/api/orders', ordersRouter);
