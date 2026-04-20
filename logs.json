@@ -1,1 +1,1 @@
-[]
+[{"id":1776720027675,"type":"info","message":"Скачивание import.xml из S3...","time":"9:20:27 PM","path":"/api/1c/sync-s3"},{"id":1776720027653,"type":"info","message":"--- СИНХРОНИЗАЦИЯ БАЗЫ ИЗ S3 ХРАНИЛИЩА ЗАПУЩЕНА ---","time":"9:20:27 PM","path":"/api/1c/sync-s3"}]

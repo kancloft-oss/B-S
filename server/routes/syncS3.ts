@@ -104,65 +104,69 @@ syncS3Router.post('/', async (req, res) => {
 
     addLog(req, `Начинается сохранение товаров в базу данных...`);
     let saved = 0;
-
-    for (const p of products) {
-        const offer = offersMap.get(p.Ид);
-        let price = 0;
-        let purchasePrice = 0;
+    const BATCH_SIZE = 50;
+    
+    for (let i = 0; i < products.length; i += BATCH_SIZE) {
+        const batch = products.slice(i, i + BATCH_SIZE);
         
-        if (offer && offer.Цены && offer.Цены.Цена) {
-            const prices = Array.isArray(offer.Цены.Цена) ? offer.Цены.Цена : [offer.Цены.Цена];
-            for (const pr of prices) {
-                if (pr.ИдТипаЦены === retailPriceTypeId) price = parseFloat(pr.ЦенаЗаЕдиницу || '0');
-                if (pr.ИдТипаЦены === purchasePriceTypeId) purchasePrice = parseFloat(pr.ЦенаЗаЕдиницу || '0');
+        await Promise.all(batch.map(async (p: any) => {
+            const offer = offersMap.get(p.Ид);
+            let price = 0;
+            let purchasePrice = 0;
+            
+            if (offer && offer.Цены && offer.Цены.Цена) {
+                const prices = Array.isArray(offer.Цены.Цена) ? offer.Цены.Цена : [offer.Цены.Цена];
+                for (const pr of prices) {
+                    if (pr.ИдТипаЦены === retailPriceTypeId) price = parseFloat(pr.ЦенаЗаЕдиницу || '0');
+                    if (pr.ИдТипаЦены === purchasePriceTypeId) purchasePrice = parseFloat(pr.ЦенаЗаЕдиницу || '0');
+                }
             }
-        }
-        
-        const stock = parseFloat(offer?.Количество || '0');
-        let categoryId = null;
-        if (p.Группы && p.Группы.Ид) {
-            categoryId = p.Группы.Ид;
-        } else if (importData.Категория) {
-             categoryId = p.Категория;
-        }
-
-        let imageUrl = null;
-        if (p.Картинка) {
-            const firstImage = Array.isArray(p.Картинка) ? p.Картинка[0] : p.Картинка;
-            imageUrl = `${S3_BASE}/${firstImage}`;
-        }
-
-        const sku = p.Артикул || '';
-        const barcode = p.Штрихкод ? String(p.Штрихкод) : '';
-        const name = p.Наименование || 'Без названия';
-        const description = typeof p.Описание === 'string' ? p.Описание : '';
-        const maxDescription = description.substring(0, 1000);
-
-        try {
-           await db.query(`
-                INSERT INTO products (id, name, sku, barcode, "categoryId", price, "purchasePrice", stock, description, image, "createdAt", "updatedAt")
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-                ON CONFLICT (id) DO UPDATE SET
-                name = EXCLUDED.name, sku = EXCLUDED.sku, barcode = EXCLUDED.barcode, "categoryId" = EXCLUDED."categoryId",
-                price = EXCLUDED.price, "purchasePrice" = EXCLUDED."purchasePrice", stock = EXCLUDED.stock, 
-                description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
-            `, [
-               p.Ид, name, sku, barcode, categoryId, price, purchasePrice, stock, maxDescription, imageUrl, new Date().toISOString(), new Date().toISOString()
-            ]);
-            saved++;
-            if (saved % 500 === 0) {
-               addLog(req, `Сохранено ${saved} товаров из ${products.length}...`);
+            
+            const stock = parseFloat(offer?.Количество || '0');
+            let categoryId = null;
+            if (p.Группы && p.Группы.Ид) {
+                categoryId = p.Группы.Ид;
+            } else if (importData.Категория) {
+                 categoryId = p.Категория;
             }
-        } catch (e) {
-            console.error(`Failed to save product ${p.Ид}: `, e);
-        }
+
+            let imageUrl = null;
+            if (p.Картинка) {
+                const firstImage = Array.isArray(p.Картинка) ? p.Картинка[0] : p.Картинка;
+                imageUrl = `${S3_BASE}/${firstImage}`;
+            }
+
+            const sku = p.Артикул || '';
+            const barcode = p.Штрихкод ? String(p.Штрихкод) : '';
+            const name = p.Наименование || 'Без названия';
+            const description = typeof p.Описание === 'string' ? p.Описание : '';
+            const maxDescription = description.substring(0, 1000);
+
+            try {
+               await db.query(`
+                    INSERT INTO products (id, name, sku, barcode, "categoryId", price, "purchasePrice", stock, description, image, "createdAt", "updatedAt")
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                    ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name, sku = EXCLUDED.sku, barcode = EXCLUDED.barcode, "categoryId" = EXCLUDED."categoryId",
+                    price = EXCLUDED.price, "purchasePrice" = EXCLUDED."purchasePrice", stock = EXCLUDED.stock, 
+                    description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
+                `, [
+                   p.Ид, name, sku, barcode, categoryId, price, purchasePrice, stock, maxDescription, imageUrl, new Date().toISOString(), new Date().toISOString()
+                ]);
+                saved++;
+            } catch (e) {
+                console.error(`Failed to save product ${p.Ид}: `, e);
+            }
+        }));
+
+        addLog(req, `Сохранено ${saved} товаров из ${products.length}...`);
     }
     
     addLog(req, `СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено ${saved} товаров.`);
   } catch (e: any) {
     const errorMsg = e.name === 'UnknownError' && e.$metadata?.httpStatusCode === 404 
       ? 'Файлы не найдены в S3 (404)! Убедитесь, что файлы лежат в папке /1C/ (например, 1C/import.xml).' 
-      : `${e.name}: ${e.message} ${e.$metadata ? `(HTTP ${e.$metadata.httpStatusCode})` : ''}`;
+      : `${e.name}: ${e.message} ${e.$metadata ? `(HTTP ${e.$metadata.httpStatusCode})` : ''} - (endpoint: ${process.env.S3_ENDPOINT}, bucket: ${process.env.S3_BUCKET_NAME})`;
     addLog(req, `ОШИБКА СИНХРОНИЗАЦИИ: ${errorMsg}`);
     console.error('Import Error:', e);
   }
