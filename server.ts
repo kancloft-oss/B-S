@@ -150,7 +150,8 @@ async function startServer() {
         Bucket: bucket,
         Key: key,
         Body: stream,
-        ContentType: contentType
+        ContentType: contentType,
+        ContentLength: parseInt(req.headers['content-length'] || '0') || undefined
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
@@ -200,7 +201,17 @@ async function startServer() {
       params.push(limit, offset);
 
       const result = await db.query(query, params);
-      res.json(result.rows);
+      
+      const isAdmin = req.query.admin === 'true';
+      const products = result.rows.map(row => {
+          if (!isAdmin) {
+              const { purchasePrice, ...clientProduct } = row;
+              return clientProduct;
+          }
+          return row;
+      });
+
+      res.json(products);
     } catch (e: any) {
       if (e.message?.includes('authentication failed') || e.message?.includes('password')) {
         res.status(500).json({ error: 'DB_AUTH_FAILED', message: 'Неверный пароль к базе данных (DATABASE_URL недостоверен)' });
@@ -214,7 +225,13 @@ async function startServer() {
     try {
       const result = await db.query('SELECT * FROM products WHERE id = $1', [req.params.id]);
       if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-      res.json(result.rows[0]);
+      
+      const product = result.rows[0];
+      if (req.query.admin !== 'true') {
+          delete product.purchasePrice;
+      }
+      
+      res.json(product);
     } catch (e) {
       res.status(500).json({ error: (e as Error).message });
     }

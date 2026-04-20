@@ -26,6 +26,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  purchasePrice?: number;
   stock: number;
   image: string;
   category?: string;
@@ -856,7 +857,7 @@ function ProductMatrixView() {
     setLoading(true);
     try {
       const currentOffset = isInitial ? 0 : products.length;
-      const res = await fetch(`/api/products?limit=${PAGE_SIZE}&offset=${currentOffset}`);
+      const res = await fetch(`/api/products?limit=${PAGE_SIZE}&offset=${currentOffset}&admin=true`);
       const newProducts = await res.json();
       
       if (isInitial) {
@@ -882,7 +883,7 @@ function ProductMatrixView() {
 
     setLoading(true);
     try {
-      const res = await fetch(`/api/products?search=${encodeURIComponent(searchTerm)}&limit=10`);
+      const res = await fetch(`/api/products?search=${encodeURIComponent(searchTerm)}&limit=10&admin=true`);
       const data = await res.json();
       setProducts(data);
       setHasMore(false);
@@ -964,7 +965,9 @@ function ProductMatrixView() {
               <TableHead>Товар</TableHead>
               <TableHead>Артикул</TableHead>
               <TableHead>Категория</TableHead>
-              <TableHead>Цена</TableHead>
+              <TableHead>Цена (Розн)</TableHead>
+              <TableHead>Цена (Закуп)</TableHead>
+              <TableHead>Прибыль</TableHead>
               <TableHead>Остаток</TableHead>
               <TableHead className="text-right">Действия</TableHead>
             </TableRow>
@@ -983,7 +986,9 @@ function ProductMatrixView() {
                 </TableCell>
                 <TableCell className="font-mono text-xs">{product.sku}</TableCell>
                 <TableCell>{product.category || 'Инструмент'}</TableCell>
-                <TableCell className="font-bold">{product.price} ₽</TableCell>
+                <TableCell className="font-bold text-zinc-900">{product.price} ₽</TableCell>
+                <TableCell className="text-zinc-500">{product.purchasePrice || 0} ₽</TableCell>
+                <TableCell className="font-bold text-emerald-600">+{(product.price - (product.purchasePrice || 0)).toFixed(2)} ₽</TableCell>
                 <TableCell>
                   <Badge variant={product.stock < 10 ? "destructive" : "secondary"}>
                     {product.stock} шт.

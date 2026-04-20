@@ -36,25 +36,27 @@ export const db = pool;
 export async function initializeDatabase() {
   try {
     await db.query(`
-      CREATE TABLE IF NOT EXISTS products (
-        id TEXT PRIMARY KEY,
-        name TEXT,
-        sku TEXT,
-        category TEXT,
-        price NUMERIC,
-        stock NUMERIC,
-        description TEXT,
-        image TEXT,
-        "createdAt" TIMESTAMPTZ,
-        "updatedAt" TIMESTAMPTZ
-      );
-
       CREATE TABLE IF NOT EXISTS categories (
         id TEXT PRIMARY KEY,
         "parentId" TEXT,
         name TEXT,
         description TEXT,
         image TEXT
+      );
+
+      CREATE TABLE IF NOT EXISTS products (
+        id TEXT PRIMARY KEY,
+        name TEXT,
+        sku TEXT,
+        barcode TEXT,
+        "categoryId" TEXT,
+        price NUMERIC DEFAULT 0,
+        "purchasePrice" NUMERIC DEFAULT 0,
+        stock NUMERIC DEFAULT 0,
+        description TEXT,
+        image TEXT,
+        "createdAt" TIMESTAMPTZ,
+        "updatedAt" TIMESTAMPTZ
       );
 
       CREATE TABLE IF NOT EXISTS orders (
@@ -72,7 +74,6 @@ export async function initializeDatabase() {
     console.log('Database tables initialized successfully');
   } catch (error) {
     console.error('Error initializing database tables:', error);
-    // Don't throw, let the server start even if this fails (e.g., if relations exist)
   }
 }
 
