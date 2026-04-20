@@ -4,8 +4,11 @@ import { CommerceMLParser } from '../../src/services/commerceMLParser.js';
 import { db } from '../db.js';
 import fs from 'fs';
 import path from 'path';
+import multer from 'multer';
+import { XMLParser } from 'fast-xml-parser';
 
 export const syncS3Router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 const S3_BASE = `${process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru'}/${process.env.S3_BUCKET_NAME || 'brusher-s3'}/1C`;
 
@@ -22,6 +25,163 @@ const addLog = (req: any, msg: string) => {
      fs.writeFileSync(logPath, JSON.stringify(logs.slice(0, 50)));
   } catch(e) {}
 };
+
+syncS3Router.post('/upload-xml', upload.fields([{ name: 'importFile', maxCount: 1 }, { name: 'offersFile', maxCount: 1 }]), async (req: express.Request, res: express.Response) => {
+    addLog(req, '--- ЛОКАЛЬНАЯ ЗАГРУЗКА 1С XML ЗАПУЩЕНА ---');
+    
+    try {
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        if (!files || !files.importFile) {
+            addLog(req, 'ОШИБКА: Файл import.xml не был загружен.');
+            return res.status(400).json({ error: 'importFile required' });
+        }
+
+        res.json({ success: true, message: 'Парсинг файлов запущен в фоновом режиме' });
+
+        (async () => {
+             const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: "" });
+
+             try {
+                addLog(req, 'Чтение загруженного import.xml...');
+                const importXmlStr = files.importFile[0].buffer.toString('utf-8');
+                const importData = parser.parse(importXmlStr);
+                const catalog = importData.КоммерческаяИнформация?.Классификатор;
+
+                if (!catalog) {
+                    addLog(req, 'ОШИБКА: Неверный формат import.xml (не найден Классификатор)');
+                    return;
+                }
+
+                const rawCategories = catalog.Группы?.Группа;
+                const categories = Array.isArray(rawCategories) ? rawCategories : (rawCategories ? [rawCategories] : []);
+                
+                const categoriesToImport: any[] = [];
+                const extractCategories = (cats: any[], parentId: string | null = null) => {
+                    for (const c of cats) {
+                        categoriesToImport.push({ id: c.Ид, name: c.Наименование, parentId });
+                        if (c.Группы && c.Группы.Группа) {
+                            extractCategories(Array.isArray(c.Группы.Группа) ? c.Группы.Группа : [c.Группы.Группа], c.Ид);
+                        }
+                    }
+                };
+                extractCategories(categories);
+
+                addLog(req, `Найдено категорий в файле: ${categoriesToImport.length}`);
+                for (const cat of categoriesToImport) {
+                    await db.query(`
+                        INSERT INTO categories (id, "parentId", name) 
+                        VALUES ($1, $2, $3)
+                        ON CONFLICT (id) DO UPDATE SET 
+                        "parentId" = EXCLUDED."parentId", name = EXCLUDED.name
+                    `, [cat.id, cat.parentId, cat.name]);
+                }
+                addLog(req, `Дерево категорий успешно сохранено.`);
+
+                const rawProducts = importData.КоммерческаяИнформация?.Каталог?.Товары?.Товар || catalog.Товары?.Товар || importData.КоммерческаяИнформация?.Товары?.Товар;
+                const products = Array.isArray(rawProducts) ? rawProducts : (rawProducts ? [rawProducts] : []);
+                addLog(req, `Найдено товаров в import.xml: ${products.length}`);
+
+                let offersMap = new Map();
+                let retailPriceTypeId = '';
+                let purchasePriceTypeId = '';
+
+                if (files.offersFile) {
+                    addLog(req, 'Чтение загруженного offers.xml (цены и остатки)...');
+                    const offersXmlStr = files.offersFile[0].buffer.toString('utf-8');
+                    const offersData = parser.parse(offersXmlStr);
+                    
+                    const packageOffers = offersData?.КоммерческаяИнформация?.ПакетПредложений;
+                    const rawPriceTypes = packageOffers?.ТипыЦен?.ТипЦены;
+                    const priceTypes = Array.isArray(rawPriceTypes) ? rawPriceTypes : (rawPriceTypes ? [rawPriceTypes] : []);
+                    
+                    for (const pt of priceTypes) {
+                        const name = (pt.Наименование || '').toLowerCase();
+                        if (name.includes('розничн')) retailPriceTypeId = pt.Ид;
+                        if (name.includes('закупочн')) purchasePriceTypeId = pt.Ид;
+                    }
+                    if (!retailPriceTypeId && priceTypes.length > 0) retailPriceTypeId = priceTypes[0].Ид; 
+                    
+                    const rawOffers = packageOffers?.Предложения?.Предложение;
+                    const offers = Array.isArray(rawOffers) ? rawOffers : (rawOffers ? [rawOffers] : []);
+                    offersMap = new Map(offers.map((o: any) => [o.Ид, o]));
+                    addLog(req, `Найдено предложений (цен/остатков) в offers.xml: ${offers.length}`);
+                } else {
+                    addLog(req, 'Файл offers.xml не был загружен. Цены и остатки будут установлены в 0.');
+                }
+
+                addLog(req, `Начинается сохранение товаров в базу данных...`);
+                let saved = 0;
+                const BATCH_SIZE = 50;
+                
+                for (let i = 0; i < products.length; i += BATCH_SIZE) {
+                    const batch = products.slice(i, i + BATCH_SIZE);
+                    
+                    await Promise.all(batch.map(async (p: any) => {
+                        const offer = offersMap.get(p.Ид);
+                        let price = 0;
+                        let purchasePrice = 0;
+                        
+                        if (offer && offer.Цены && offer.Цены.Цена) {
+                            const prices = Array.isArray(offer.Цены.Цена) ? offer.Цены.Цена : [offer.Цены.Цена];
+                            for (const pr of prices) {
+                                if (pr.ИдТипаЦены === retailPriceTypeId) price = parseFloat(pr.ЦенаЗаЕдиницу || '0');
+                                if (pr.ИдТипаЦены === purchasePriceTypeId) purchasePrice = parseFloat(pr.ЦенаЗаЕдиницу || '0');
+                            }
+                        }
+                        
+                        const stock = parseFloat(offer?.Количество || '0');
+                        let categoryId = null;
+                        if (p.Группы && p.Группы.Ид) {
+                            categoryId = p.Группы.Ид;
+                        } else if (p.Категория) {
+                             categoryId = p.Категория;
+                        }
+
+                        let imageUrl = null;
+                        if (p.Картинка) {
+                            const firstImage = Array.isArray(p.Картинка) ? p.Картинка[0] : p.Картинка;
+                            imageUrl = `${S3_BASE}/${firstImage}`;
+                        }
+
+                        const sku = p.Артикул || '';
+                        const barcode = p.Штрихкод ? String(p.Штрихкод) : '';
+                        const name = p.Наименование || 'Без названия';
+                        const description = typeof p.Описание === 'string' ? p.Описание : '';
+                        const maxDescription = description.substring(0, 1000);
+
+                        try {
+                           await db.query(`
+                                INSERT INTO products (id, name, sku, barcode, "categoryId", price, "purchasePrice", stock, description, image, "createdAt", "updatedAt")
+                                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                                ON CONFLICT (id) DO UPDATE SET
+                                name = EXCLUDED.name, sku = EXCLUDED.sku, barcode = EXCLUDED.barcode, "categoryId" = EXCLUDED."categoryId",
+                                price = EXCLUDED.price, "purchasePrice" = EXCLUDED."purchasePrice", stock = EXCLUDED.stock, 
+                                description = EXCLUDED.description, image = EXCLUDED.image, "updatedAt" = EXCLUDED."updatedAt"
+                            `, [
+                               p.Ид, name, sku, barcode, categoryId, price, purchasePrice, stock, maxDescription, imageUrl, new Date().toISOString(), new Date().toISOString()
+                            ]);
+                            saved++;
+                        } catch (e) {
+                            console.error(`Failed to save product ${p.Ид}: `, e);
+                        }
+                    }));
+
+                    addLog(req, `Сохранено ${saved} товаров из ${products.length}...`);
+                }
+                
+                addLog(req, `СИНХРОНИЗАЦИЯ УСПЕШНО ЗАВЕРШЕНА! Сохранено ${saved} товаров.`);
+
+             } catch (e: any) {
+                const errorMsg = `${e.name}: ${e.message}`;
+                addLog(req, `ОШИБКА ОБРАБОТКИ: ${errorMsg}`);
+                console.error('Local Upload Error:', e);
+             }
+        })();
+    } catch(e) {
+        addLog(req, 'Ошибка при приеме файлов');
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
 syncS3Router.post('/', async (req, res) => {
   // Run process in background, respond immediately

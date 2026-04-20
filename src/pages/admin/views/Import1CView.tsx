@@ -26,6 +26,69 @@ import { handleFirestoreError, getStatusBadge, getSegmentIcon } from '../utils';
 // 7. Import 1C View
 export default function Import1CView() {
   const [file, setFile] = useState<File | null>(null);
+  const [xmlImportFile, setXmlImportFile] = useState<File | null>(null);
+  const [xmlOffersFile, setXmlOffersFile] = useState<File | null>(null);
+
+  const handleManualXmlImport = async () => {
+    if (!xmlImportFile) return;
+    setLoading(true);
+    setLogs([]);
+    setProgress(0);
+    addLog("Начало локальной синхронизации: отправка XML файлов на сервер...");
+
+    const formData = new FormData();
+    formData.append('importFile', xmlImportFile);
+    if (xmlOffersFile) {
+        formData.append('offersFile', xmlOffersFile);
+    }
+
+    try {
+      const res = await fetch('/api/1c/upload-xml', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Server error');
+      addLog(data.message);
+      
+      // Start polling logs.json to update progress
+      let interval = setInterval(async () => {
+         try {
+            const logsRes = await fetch('/api/logs');
+            if (logsRes.ok) {
+               const logsData = await logsRes.json();
+               const syncLogs = logsData.filter((l: any) => l.path === '/api/1c/upload-xml').map((l: any) => `[${l.time}] ${l.message}`);
+               if (syncLogs.length > 0) {
+                 setLogs(syncLogs);
+                 // Check if done
+                 if (syncLogs[0].includes("УСПЕШНО ЗАВЕРШЕНА") || syncLogs[0].includes("ОШИБКА ОБРАБОТКИ")) {
+                    clearInterval(interval);
+                    setLoading(false);
+                    setProgress(100);
+                    fetchStats();
+                 } else {
+                    const match = syncLogs[0].match(/Сохранено (\d+) товаров из (\d+)/);
+                    if (match) {
+                        const count = parseInt(match[1]);
+                        const total = parseInt(match[2]);
+                        setProgress(Math.round((count / total) * 100));
+                    } else if (syncLogs[0].includes("Чтение загруженного offers.xml")) {
+                        setProgress(30);
+                    } else if (syncLogs[0].includes("Сохранено")) {
+                        setProgress(50);
+                    } else if (syncLogs[0].includes("Чтение загруженного import.xml")) {
+                        setProgress(10);
+                    }
+                 }
+               }
+            }
+         } catch(e) {}
+      }, 2000);
+    } catch(e) {
+      addLog(`Ошибка запуска: ${e instanceof Error ? e.message : String(e)}`);
+      setLoading(false);
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
@@ -266,6 +329,72 @@ export default function Import1CView() {
             </CardContent>
           </Card>
 
+
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardHeader className="pt-6">
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="w-5 h-5 text-orange-500" />
+                Ручная загрузка как шаблон (XML из 1C)
+              </CardTitle>
+              <CardDescription>
+                Загрузите файлы import.xml и offers.xml напрямую, минуя S3. 
+                Система проанализирует эти файлы так же, как при автоматической синхронизации.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="border border-zinc-200 rounded-xl p-4 text-center space-y-3 hover:border-zinc-300 transition-all bg-zinc-50/50">
+                    <p className="font-medium text-sm text-zinc-900">1. Каталог (Обязательно)</p>
+                    <Input 
+                      type="file" 
+                      accept=".xml" 
+                      onChange={(e) => e.target.files && setXmlImportFile(e.target.files[0])}
+                      className="hidden" 
+                      id="xml-import-upload"
+                    />
+                    <label htmlFor="xml-import-upload" className="cursor-pointer block">
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-9 px-4 shadow-sm w-full">
+                        Выберите import.xml
+                      </div>
+                    </label>
+                    {xmlImportFile && (
+                      <div className="flex items-center justify-center gap-1 text-xs font-bold text-emerald-600 truncate px-2">
+                        <CheckCircle2 className="w-3 h-3 shrink-0" /> <span className="truncate">{xmlImportFile.name}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="border border-zinc-200 rounded-xl p-4 text-center space-y-3 hover:border-zinc-300 transition-all bg-zinc-50/50">
+                    <p className="font-medium text-sm text-zinc-900">2. Цены / Остатки</p>
+                    <Input 
+                      type="file" 
+                      accept=".xml" 
+                      onChange={(e) => e.target.files && setXmlOffersFile(e.target.files[0])}
+                      className="hidden" 
+                      id="xml-offers-upload"
+                    />
+                    <label htmlFor="xml-offers-upload" className="cursor-pointer block">
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-9 px-4 shadow-sm w-full">
+                        Выберите offers.xml
+                      </div>
+                    </label>
+                    {xmlOffersFile && (
+                      <div className="flex items-center justify-center gap-1 text-xs font-bold text-emerald-600 truncate px-2">
+                        <CheckCircle2 className="w-3 h-3 shrink-0" /> <span className="truncate">{xmlOffersFile.name}</span>
+                      </div>
+                    )}
+                  </div>
+              </div>
+
+              <Button 
+                onClick={handleManualXmlImport} 
+                disabled={loading || !xmlImportFile} 
+                className="w-full bg-zinc-900 hover:bg-zinc-800 text-white shadow-md disabled:bg-zinc-300 disabled:text-zinc-500"
+              >
+                {loading ? 'Идет обработка...' : 'Загрузить XML файлы сервера'}
+              </Button>
+            </CardContent>
+          </Card>
 
           <Card className="border-none shadow-sm overflow-hidden">
             <CardHeader>

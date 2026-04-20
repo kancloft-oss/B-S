@@ -39,7 +39,13 @@ async function startServer() {
   app.get('/api/health', async (req, res) => {
     try {
       await db.query('SELECT 1');
-      res.json({ status: 'ok', database: 'connected' });
+      res.json({ 
+        status: 'ok', 
+        database: 'connected',
+        s3_endpoint: process.env.S3_ENDPOINT,
+        s3_bucket: process.env.S3_BUCKET_NAME,
+        has_access_key: !!process.env.S3_ACCESS_KEY
+      });
     } catch (e) {
       if ((e as Error).message.includes('authentication failed') || (e as Error).message.includes('password')) {
         res.status(500).json({ error: 'DB_AUTH_FAILED', message: 'Неверный логин или пароль к базе данных' });
