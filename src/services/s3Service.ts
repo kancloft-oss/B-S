@@ -4,30 +4,37 @@ import { v4 as uuidv4 } from 'uuid';
 import sharp from 'sharp';
 import path from 'path';
 
-// Load S3 Config from Environment Variables
-const s3Config = {
-  endpoint: process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru',
-  region: process.env.S3_REGION || 'ru-1',
-  credentials: {
-    accessKeyId: process.env.S3_ACCESS_KEY || '',
-    secretAccessKey: process.env.S3_SECRET_KEY || ''
-  },
-  forcePathStyle: true
-};
+let s3ClientInstance: S3Client | null = null;
 
-const s3Client = new S3Client(s3Config);
-const BUCKET_NAME = process.env.S3_BUCKET_NAME || 'brusher-s3';
+function getS3Client() {
+  if (!s3ClientInstance) {
+    s3ClientInstance = new S3Client({
+      endpoint: process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru',
+      region: process.env.S3_REGION || 'ru-1',
+      credentials: {
+        accessKeyId: process.env.S3_ACCESS_KEY || '',
+        secretAccessKey: process.env.S3_SECRET_KEY || ''
+      },
+      forcePathStyle: true
+    });
+  }
+  return s3ClientInstance;
+}
+
+function getBucketName() {
+  return process.env.S3_BUCKET_NAME || 'brusher-s3';
+}
 
 /**
  * Downloads a file from Timeweb Cloud S3
  */
 export async function downloadFromS3(key: string): Promise<string> {
   const command = new GetObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: getBucketName(),
     Key: key,
   });
 
-  const response = await s3Client.send(command);
+  const response = await getS3Client().send(command);
   
   if (!response.Body) {
     throw new Error('S3 Response Body is empty');
@@ -73,7 +80,7 @@ export async function uploadToS3(file: Express.Multer.File, folder: string): Pro
   const key = `${folder}/${filename}`;
 
   const command = new PutObjectCommand({
-    Bucket: BUCKET_NAME,
+    Bucket: getBucketName(),
     Key: key,
     Body: finalBuffer,
     ContentType: finalMimeType,
@@ -82,8 +89,9 @@ export async function uploadToS3(file: Express.Multer.File, folder: string): Pro
     ACL: 'public-read' 
   });
 
-  await s3Client.send(command);
+  await getS3Client().send(command);
 
   // Return the public URL
-  return `${s3Config.endpoint}/${BUCKET_NAME}/${key}`;
+  const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
+  return `${endpoint}/${getBucketName()}/${key}`;
 }
