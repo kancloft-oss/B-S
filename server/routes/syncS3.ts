@@ -75,26 +75,32 @@ syncS3Router.post('/', async (req, res) => {
     addLog(req, `Найдено товаров в import.xml: ${products.length}`);
 
     addLog(req, 'Скачивание offers.xml из S3 (цены и остатки)...');
-    const offersXml = await downloadFromS3('1C/offers.xml');
-    const offersData = parser.parse(offersXml);
-    
-    const packageOffers = offersData?.КоммерческаяИнформация?.ПакетПредложений;
-    const rawPriceTypes = packageOffers?.ТипыЦен?.ТипЦены;
-    const priceTypes = Array.isArray(rawPriceTypes) ? rawPriceTypes : (rawPriceTypes ? [rawPriceTypes] : []);
-    
+    let offersMap = new Map();
     let retailPriceTypeId = '';
     let purchasePriceTypeId = '';
-    
-    for (const pt of priceTypes) {
-        const name = (pt.Наименование || '').toLowerCase();
-        if (name.includes('розничн')) retailPriceTypeId = pt.Ид;
-        if (name.includes('закупочн')) purchasePriceTypeId = pt.Ид;
+
+    try {
+        const offersXml = await downloadFromS3('1C/offers.xml');
+        const offersData = parser.parse(offersXml);
+        
+        const packageOffers = offersData?.КоммерческаяИнформация?.ПакетПредложений;
+        const rawPriceTypes = packageOffers?.ТипыЦен?.ТипЦены;
+        const priceTypes = Array.isArray(rawPriceTypes) ? rawPriceTypes : (rawPriceTypes ? [rawPriceTypes] : []);
+        
+        for (const pt of priceTypes) {
+            const name = (pt.Наименование || '').toLowerCase();
+            if (name.includes('розничн')) retailPriceTypeId = pt.Ид;
+            if (name.includes('закупочн')) purchasePriceTypeId = pt.Ид;
+        }
+        if (!retailPriceTypeId && priceTypes.length > 0) retailPriceTypeId = priceTypes[0].Ид; 
+        
+        const rawOffers = packageOffers?.Предложения?.Предложение;
+        const offers = Array.isArray(rawOffers) ? rawOffers : (rawOffers ? [rawOffers] : []);
+        offersMap = new Map(offers.map(o => [o.Ид, o]));
+        addLog(req, `Найдено предложений (цен/остатков) в offers.xml: ${offers.length}`);
+    } catch (e: any) {
+        addLog(req, `Файл offers.xml не найден в S3 или ошибка при чтении. Цены и остатки будут установлены в 0.`);
     }
-    if (!retailPriceTypeId && priceTypes.length > 0) retailPriceTypeId = priceTypes[0].Ид; 
-    
-    const rawOffers = packageOffers?.Предложения?.Предложение;
-    const offers = Array.isArray(rawOffers) ? rawOffers : (rawOffers ? [rawOffers] : []);
-    const offersMap = new Map(offers.map(o => [o.Ид, o]));
 
     addLog(req, `Начинается сохранение товаров в базу данных...`);
     let saved = 0;
