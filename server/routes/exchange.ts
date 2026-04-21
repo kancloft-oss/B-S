@@ -27,16 +27,12 @@ export const exchangeRouter = express.Router();
         try {
           const fileKey = (filename as string);
           
-          // Считываем поток в буфер
-          const chunks = [];
-          for await (const chunk of req) {
-            chunks.push(chunk);
-          }
-          const buffer = Buffer.concat(chunks);
+          // Используем уже считанный буфер из req.body
+          const buffer = req.body;
           
           console.log(`--- UPLOADING TO S3: ${fileKey}, Buffer Size: ${buffer.length} ---`);
           
-          if (buffer.length === 0) {
+          if (!buffer || buffer.length === 0) {
             console.warn(`--- WARNING: Uploading empty file! ${fileKey} ---`);
           }
 
