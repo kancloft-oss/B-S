@@ -25,14 +25,12 @@ export const exchangeRouter = express.Router();
       // Если 1С отправляет файл (POST), перенаправляем его прямо в S3
       if (type === 'catalog' && mode === 'file' && req.method === 'POST' && filename) {
         try {
-          // Гарантируем, что файлы лежат в папке 1C/
-          let fileKey = (filename as string);
-          if (!fileKey.startsWith('1C/')) {
-            fileKey = `1C/${fileKey}`;
-          }
+          // Всегда сохраняем в 1C/basename(filename)
+          const baseName = (filename as string).split(/[\\/]/).pop();
+          const fileKey = `1C/${baseName}`;
+          
           console.log(`--- UPLOADING TO S3: ${fileKey} ---`);
           
-          // Передаем поток (req) напрямую в S3
           await uploadRawToS3(req, fileKey, 'application/octet-stream', req.headers['content-length'] as string);
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
