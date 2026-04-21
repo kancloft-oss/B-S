@@ -48,7 +48,7 @@ export const exchangeRouter = express.Router();
   // Helper for 1C raw upload
   // Ограничитель параллельных загрузок (Semaphore)
 let concurrentUploads = 0;
-const MAX_CONCURRENT_UPLOADS = 20;
+const MAX_CONCURRENT_UPLOADS = 100;
 
 async function executeWithLimiter<T>(fn: () => Promise<T>): Promise<T> {
   if (concurrentUploads >= MAX_CONCURRENT_UPLOADS) {
