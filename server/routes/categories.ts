@@ -4,14 +4,14 @@ import { db } from '../db.js';
 export const categoriesRouter = express.Router();
 
 // ================= API CATEGORIES =================
-  categoriesRouter.get('', async (req, res) => {
+  categoriesRouter.get('/', async (req, res) => {
     try {
       const result = await db.query('SELECT * FROM categories');
       res.json(result.rows);
     } catch (e) { res.status(500).json({ error: (e as Error).message }); }
   });
 
-  categoriesRouter.post('', async (req, res) => {
+  categoriesRouter.post('/', async (req, res) => {
     try {
       const c = req.body;
       const safeName = (c.name || '').toString().trim();

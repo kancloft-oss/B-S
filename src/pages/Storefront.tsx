@@ -72,7 +72,7 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
             parentId: data.parentId,
             name: data.name,
             icon: matched?.icon || Package,
-            image: matched?.image || `https://picsum.photos/seed/${encodeURIComponent(data.name).substring(0,20)}/100/100` 
+            image: data.image || matched?.image || `https://picsum.photos/seed/${encodeURIComponent(data.name).substring(0,20)}/200/200` 
           };
         });
         
@@ -204,16 +204,18 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
         <div className="grid grid-rows-2 grid-flow-col gap-3 overflow-x-auto snap-x no-scrollbar pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid-rows-none md:grid-cols-4 lg:grid-cols-8 md:grid-flow-row mb-8 md:mb-10">
           {categories.slice(0, 8).map((cat) => (
             <Link 
-              key={cat.name}
+              key={cat.id || cat.name}
               to={`/category/${cat.name}`}
-              className="bg-brand-gray rounded-xl p-3 md:p-4 flex flex-col relative overflow-hidden group h-24 md:h-36 min-w-[140px] w-[140px] md:min-w-0 md:w-auto snap-start"
+              className="bg-[#f2f2f2] rounded-xl p-3 md:p-4 flex flex-col relative overflow-hidden group h-32 md:h-40 min-w-[140px] w-[140px] md:min-w-0 md:w-auto snap-start hover:bg-[#e8e8e8] transition-colors"
             >
-              <span className="text-sm md:text-base font-medium text-zinc-900 leading-tight z-10 w-2/3">{cat.name}</span>
-              <img 
-                src={cat.image} 
-                alt={cat.name} 
-                className="absolute -bottom-2 -right-2 w-14 h-14 md:w-20 md:h-20 object-contain mix-blend-multiply group-hover:scale-110 transition-transform duration-300"
-              />
+              <span className="text-sm md:text-base font-bold text-zinc-900 leading-tight z-10 w-full mb-auto">{cat.name}</span>
+              <div className="absolute inset-x-0 bottom-0 h-3/5 flex items-end justify-center">
+                 <img 
+                   src={cat.image} 
+                   alt={cat.name} 
+                   className="w-full h-full object-contain object-bottom mix-blend-multiply group-hover:scale-105 transition-transform duration-300 px-2"
+                 />
+              </div>
             </Link>
           ))}
         </div>
