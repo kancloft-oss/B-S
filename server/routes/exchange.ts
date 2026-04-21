@@ -25,10 +25,18 @@ export const exchangeRouter = express.Router();
       // Если 1С отправляет файл (POST), перенаправляем его прямо в S3
       if (type === 'catalog' && mode === 'file' && req.method === 'POST' && filename) {
         try {
-          const fileKey = (filename as string); // Сохраняем имя как есть
+          const fileKey = (filename as string);
+          
+          // Считываем поток в буфер
+          const chunks = [];
+          for await (const chunk of req) {
+            chunks.push(chunk);
+          }
+          const buffer = Buffer.concat(chunks);
+          
           console.log(`--- UPLOADING TO S3: ${fileKey} ---`);
           
-          await executeWithLimiter(() => uploadRawToS3(req, fileKey, 'application/octet-stream'));
+          await executeWithLimiter(() => uploadBufferedToS3(buffer, fileKey, 'application/octet-stream'));
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
@@ -64,16 +72,10 @@ async function executeWithLimiter<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // Helper for 1C raw upload
-async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string) {
+async function uploadBufferedToS3(buffer: Buffer, key: string, contentType: string) {
   const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
   const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
   
-  const chunks = [];
-  for await (const chunk of stream) {
-    chunks.push(chunk);
-  }
-  const buffer = Buffer.concat(chunks);
-
   const s3Client = new S3Client({
     endpoint: endpoint,
     region: process.env.S3_REGION || 'ru-1',
