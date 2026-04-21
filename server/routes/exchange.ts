@@ -38,13 +38,18 @@ export const exchangeRouter = express.Router();
             console.warn(`--- WARNING: Uploading empty file! ${fileKey} ---`);
           }
 
-          await executeWithLimiter(() => uploadBufferedToS3(buffer, fileKey, 'application/octet-stream'));
+          // Асинхронно запускаем отправку в S3, не дожидаясь её завершения для ответа 1С
+          executeWithLimiter(() => uploadBufferedToS3(buffer, fileKey, 'application/octet-stream'))
+            .then(() => {
+              const end = Date.now();
+              console.log(`[PERF] ${fileKey}: Size=${buffer.length} bytes | Upload took=${end - bufferReady}ms`);
+              console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
+            })
+            .catch(err => {
+              console.error(`--- FAILED TO UPLOAD ${fileKey} TO S3:`, err);
+            });
           
-          const end = Date.now();
-          
-          console.log(`[PERF] ${fileKey}: Size=${buffer.length} bytes | 1C_Receive=${bufferReady - start}ms | S3_Upload=${end - bufferReady}ms | Total=${end - start}ms`);
-          
-          console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
+          // Мгновенно отвечаем 1С
           return res.send('success');
         } catch (e) {
           console.error('S3 Upload Error Details:', e);
