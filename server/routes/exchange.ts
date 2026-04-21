@@ -38,8 +38,8 @@ export const exchangeRouter = express.Router();
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
         } catch (e) {
-          console.error('S3 Upload Error:', e);
-          return res.status(500).send('failure\nS3 Upload error');
+          console.error('S3 Upload Error Details:', e);
+          return res.status(500).send('failure\n' + (e as Error).stack);
         }
       }
 
