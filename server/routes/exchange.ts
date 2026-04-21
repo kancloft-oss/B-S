@@ -51,11 +51,18 @@ export const exchangeRouter = express.Router();
   });
 
   // Helper for 1C raw upload
-  // Helper for 1C raw streaming upload
+  // Helper for 1C raw streaming upload (buffered for stability)
   async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string, contentLengthStr?: string) {
     const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
     const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
     
+    // Считываем весь поток в буфер для стабильной загрузки
+    const chunks = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    const buffer = Buffer.concat(chunks);
+
     const s3Client = new S3Client({
       endpoint: endpoint,
       region: process.env.S3_REGION || 'ru-1',
@@ -63,22 +70,20 @@ export const exchangeRouter = express.Router();
         accessKeyId: process.env.S3_ACCESS_KEY || '',
         secretAccessKey: process.env.S3_SECRET_KEY || ''
       },
-      forcePathStyle: true // Возвращаем обязательно
+      forcePathStyle: true
     });
 
     try {
       await s3Client.send(new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        Body: stream,
+        Body: buffer,
         ContentType: contentType,
-        ContentLength: contentLengthStr ? parseInt(contentLengthStr) : undefined,
-        // Явно отключаем проверку хеша, так как поток не позволяет его вычислить на лету
-        ChecksumAlgorithm: undefined 
+        ContentLength: buffer.length
       }));
-      console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
+      console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}, Size: ${buffer.length} bytes`);
     } catch (err: any) {
-      console.error('--- S3 STREAMING UPLOAD ERROR ---', err);
-      throw err; // Пробрасываем для обработки в API-эндпоинте
+      console.error('--- S3 UPLOAD ERROR ---', err);
+      throw err;
     }
   }
