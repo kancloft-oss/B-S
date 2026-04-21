@@ -59,7 +59,7 @@ export default function Import1CView() {
                const logsData = await logsRes.json();
                const syncLogs = logsData.filter((l: any) => l.path === '/api/1c/upload-xml').map((l: any) => `[${l.time}] ${l.message}`);
                if (syncLogs.length > 0) {
-                 setLogs(syncLogs.map(s => ({id: s + Math.random(), msg: s})));
+                 setLogs(syncLogs.map((s, idx) => ({id: `${s}-${idx}`, msg: s})));
                  // Check if done
                  if (syncLogs[0].includes("УСПЕШНО ЗАВЕРШЕНА") || syncLogs[0].includes("ОШИБКА ОБРАБОТКИ")) {
                     clearInterval(interval);
@@ -151,7 +151,7 @@ export default function Import1CView() {
                // Update UI logs with only sync S3 related logs
                const syncLogs = logsData.filter((l: any) => l.path === '/api/1c/sync-s3').map((l: any) => `[${l.time}] ${l.message}`);
                if (syncLogs.length > 0) {
-                 setLogs(syncLogs.map(s => ({id: s + Math.random(), msg: s})));
+                 setLogs(syncLogs.map((s, idx) => ({id: `${s}-${idx}`, msg: s})));
                  // Check if done
                  if (syncLogs[0].includes("УСПЕШНО ЗАВЕРШЕНА") || syncLogs[0].includes("ОШИБКА СИНХРОНИЗАЦИИ")) {
                     clearInterval(interval);
