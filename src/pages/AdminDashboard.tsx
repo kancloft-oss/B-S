@@ -7,7 +7,7 @@ import {
   Edit2, Save, X, Search, Image as ImageIcon, Tag, UserPlus, LogOut, 
   Activity, ShieldAlert, Calendar, Download, Filter, ArrowUpRight, ArrowDownRight,
   UserCheck, UserMinus, Flame, Thermometer, Snowflake, Mail, Phone, MapPin,
-  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal, Star
+  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal, Star, Home
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -90,7 +90,14 @@ export function AdminDashboard() {
           ))}
         </div>
 
-        <div className="p-6 border-t border-zinc-800/50">
+        <div className="p-6 border-t border-zinc-800/50 space-y-2">
+          <Link 
+            to="/" 
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white w-full transition-all group"
+          >
+            <Home className="w-5 h-5" />
+            <span>На сайт</span>
+          </Link>
           <button 
             onClick={handleLogout}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-500 hover:bg-red-500/10 hover:text-red-500 w-full transition-all group"
