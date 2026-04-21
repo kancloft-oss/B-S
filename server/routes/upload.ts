@@ -6,7 +6,7 @@ export const uploadRouter = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ================= UPLOAD API =================
-  uploadRouter.post('//api/upload', upload.single('file'), async (req, res) => {
+  uploadRouter.post('/', upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'File is required' });
