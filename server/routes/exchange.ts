@@ -72,7 +72,9 @@ export const exchangeRouter = express.Router();
         Key: key,
         Body: stream,
         ContentType: contentType,
-        ContentLength: parseInt(contentLengthStr || '0') || undefined
+        ContentLength: contentLengthStr ? parseInt(contentLengthStr) : undefined,
+        // Явно отключаем проверку хеша, так как поток не позволяет его вычислить на лету
+        ChecksumAlgorithm: undefined 
       }));
       console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
