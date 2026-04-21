@@ -71,21 +71,21 @@ async function executeWithLimiter<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
+// Инициализируем клиент один раз для всех запросов
+const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
+const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
+const s3Client = new S3Client({
+  endpoint: endpoint,
+  region: process.env.S3_REGION || 'ru-1',
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY || '',
+    secretAccessKey: process.env.S3_SECRET_KEY || ''
+  },
+  forcePathStyle: true
+});
+
 // Helper for 1C raw upload
 async function uploadBufferedToS3(buffer: Buffer, key: string, contentType: string) {
-  const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
-  const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
-  
-  const s3Client = new S3Client({
-    endpoint: endpoint,
-    region: process.env.S3_REGION || 'ru-1',
-    credentials: {
-      accessKeyId: process.env.S3_ACCESS_KEY || '',
-      secretAccessKey: process.env.S3_SECRET_KEY || ''
-    },
-    forcePathStyle: true
-  });
-
   try {
     await s3Client.send(new PutObjectCommand({
       Bucket: bucket,
