@@ -27,16 +27,22 @@ export const exchangeRouter = express.Router();
         try {
           const fileKey = (filename as string);
           
+          const start = Date.now();
+          
           // Используем уже считанный буфер из req.body
           const buffer = req.body;
           
-          console.log(`--- UPLOADING TO S3: ${fileKey}, Buffer Size: ${buffer.length} ---`);
+          const bufferReady = Date.now();
           
           if (!buffer || buffer.length === 0) {
             console.warn(`--- WARNING: Uploading empty file! ${fileKey} ---`);
           }
 
           await executeWithLimiter(() => uploadBufferedToS3(buffer, fileKey, 'application/octet-stream'));
+          
+          const end = Date.now();
+          
+          console.log(`[PERF] ${fileKey}: Size=${buffer.length} bytes | 1C_Receive=${bufferReady - start}ms | S3_Upload=${end - bufferReady}ms | Total=${end - start}ms`);
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
