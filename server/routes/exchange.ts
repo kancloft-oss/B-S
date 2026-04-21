@@ -34,8 +34,12 @@ export const exchangeRouter = express.Router();
           }
           const buffer = Buffer.concat(chunks);
           
-          console.log(`--- UPLOADING TO S3: ${fileKey} ---`);
+          console.log(`--- UPLOADING TO S3: ${fileKey}, Buffer Size: ${buffer.length} ---`);
           
+          if (buffer.length === 0) {
+            console.warn(`--- WARNING: Uploading empty file! ${fileKey} ---`);
+          }
+
           await executeWithLimiter(() => uploadBufferedToS3(buffer, fileKey, 'application/octet-stream'));
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
