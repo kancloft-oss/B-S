@@ -310,9 +310,8 @@ syncS3Router.post('/', async (req, res) => {
                 let imageUrl = null;
                 if (p.Картинка) {
                     const firstImage = Array.isArray(p.Картинка) ? p.Картинка[0] : p.Картинка;
-                    // Исправляем путь: если картинка начинается с 1C/, оставляем, иначе добавляем
-                    const imgPath = firstImage.startsWith('1C/') ? firstImage : `1C/${firstImage}`;
-                    imageUrl = `${config.endpoint}/${config.bucket}/${imgPath}`;
+                    // Путь к картинке уже должен быть относительным от корня (например, import_files/foto.jpg)
+                    imageUrl = `${config.endpoint}/${config.bucket}/${firstImage}`;
                 }
 
 
