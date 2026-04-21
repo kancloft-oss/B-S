@@ -27,7 +27,7 @@ import CRMView from './admin/views/CRMView';
 import ProductMatrixView from './admin/views/ProductMatrixView';
 import AdminUsersView from './admin/views/AdminUsersView';
 import Import1CView from './admin/views/Import1CView';
-import SystemLogsView from './admin/views/SystemLogsView';
+import CategoriesView from './admin/views/CategoriesView';
 
 // --- Main Layout ---
 export function AdminDashboard() {
@@ -50,6 +50,7 @@ export function AdminDashboard() {
     { path: "/admin/marketing", icon: Zap, label: "Маркетинг" },
     { path: "/admin/crm", icon: Users, label: "Клиенты (CRM)" },
     { path: "/admin/products", icon: Database, label: "Товары" },
+    { path: "/admin/categories", icon: Tag, label: "Категории" },
     { path: "/admin/import", icon: RefreshCcw, label: "Импорт 1С" },
     { path: "/admin/users", icon: UserCheck, label: "Команда" },
     { path: "/admin/system", icon: Monitor, label: "Система" },
@@ -139,6 +140,7 @@ export function AdminDashboard() {
               <Route path="/marketing" element={<MarketingView />} />
               <Route path="/crm" element={<CRMView />} />
               <Route path="/products" element={<ProductMatrixView />} />
+              <Route path="/categories" element={<CategoriesView />} />
               <Route path="/import" element={<Import1CView />} />
               <Route path="/users" element={<AdminUsersView />} />
               <Route path="/system" element={<SystemLogsView />} />
