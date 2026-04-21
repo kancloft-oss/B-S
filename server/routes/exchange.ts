@@ -28,7 +28,7 @@ export const exchangeRouter = express.Router();
           const fileKey = (filename as string); // Сохраняем имя как есть
           console.log(`--- UPLOADING TO S3: ${fileKey} ---`);
           
-          await uploadRawToS3(req, fileKey, 'application/octet-stream', req.headers['content-length'] as string);
+          await executeWithLimiter(() => uploadRawToS3(req, fileKey, 'application/octet-stream'));
           
           console.log(`--- FILE UPLOADED TO S3: ${fileKey} ---`);
           return res.send('success');
@@ -46,34 +46,55 @@ export const exchangeRouter = express.Router();
   });
 
   // Helper for 1C raw upload
-  // Helper for 1C raw streaming upload
-  async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string, contentLengthStr?: string) {
-    const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
-    const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
-    
-    const s3Client = new S3Client({
-      endpoint: endpoint,
-      region: process.env.S3_REGION || 'ru-1',
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY || '',
-        secretAccessKey: process.env.S3_SECRET_KEY || ''
-      },
-      forcePathStyle: true
-    });
+  // Ограничитель параллельных загрузок (Semaphore)
+let concurrentUploads = 0;
+const MAX_CONCURRENT_UPLOADS = 20;
 
-    try {
-      await s3Client.send(new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: stream,
-        ContentType: contentType,
-        ContentLength: contentLengthStr ? parseInt(contentLengthStr) : undefined,
-        // Обязательно отключаем чексумму
-        ChecksumAlgorithm: undefined 
-      }));
-      console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
-    } catch (err: any) {
-      console.error('--- S3 UPLOAD ERROR ---', err);
-      throw err;
-    }
+async function executeWithLimiter<T>(fn: () => Promise<T>): Promise<T> {
+  if (concurrentUploads >= MAX_CONCURRENT_UPLOADS) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    return executeWithLimiter(fn);
   }
+  concurrentUploads++;
+  try {
+    return await fn();
+  } finally {
+    concurrentUploads--;
+  }
+}
+
+// Helper for 1C raw upload
+async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string) {
+  const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
+  const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
+  
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  const buffer = Buffer.concat(chunks);
+
+  const s3Client = new S3Client({
+    endpoint: endpoint,
+    region: process.env.S3_REGION || 'ru-1',
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY || '',
+      secretAccessKey: process.env.S3_SECRET_KEY || ''
+    },
+    forcePathStyle: true
+  });
+
+  try {
+    await s3Client.send(new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: contentType,
+      ContentLength: buffer.length
+    }));
+    console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}, Size: ${buffer.length} bytes`);
+  } catch (err: any) {
+    console.error('--- S3 UPLOAD ERROR ---', err);
+    throw err;
+  }
+}
