@@ -198,6 +198,11 @@ syncS3Router.post('/', async (req, res) => {
         
         addLog(req, 'Скачивание import.xml из S3...');
         const importXml = await downloadFromS3('1C/import.xml', config);
+
+        if (!importXml || importXml.length < 100) {
+           throw new Error("Загруженный XML файл пуст или слишком мал (меньше 100 символов). Проверьте файл в S3.");
+        }
+
         const importData = parser.parse(importXml);
         
         const catalog = importData?.КоммерческаяИнформация?.Каталог;
