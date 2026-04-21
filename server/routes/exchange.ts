@@ -52,6 +52,11 @@ export const exchangeRouter = express.Router();
         }
       }
 
+      // Если 1С отправляет команду import, отвечаем корректно по протоколу
+      if (type === 'catalog' && mode === 'import') {
+        return res.send('progress\nПроцесс импорта прошел успешно');
+      }
+
       res.send('success');
     } catch (e) {
       console.error('1C Exchange Error:', e);
