@@ -197,16 +197,28 @@ syncS3Router.post('/', async (req, res) => {
         const parser = new CommerceMLParser();
         
         addLog(req, 'Скачивание import.xml из S3...');
-        const importXml = await downloadFromS3('1C/import.xml', config);
+        const importXml = await downloadFromS3('import.xml', config);
 
         if (!importXml || importXml.length < 100) {
            throw new Error("Загруженный XML файл пуст или слишком мал (меньше 100 символов). Проверьте файл в S3.");
         }
+        
+        // Debug: Log the start of the file
+        addLog(req, `XML заголовок: ${importXml.substring(0, 50)}...`);
 
         const importData = parser.parse(importXml);
         
+        // Debug: Check if importData is valid
+        if (!importData) {
+            addLog(req, `Результат парсинга пуст!`);
+            throw new Error("Парсинг XML вернул пустой результат");
+        }
+        
         const catalog = importData?.КоммерческаяИнформация?.Каталог;
-        if (!catalog) throw new Error('Некорректный формат import.xml: Отсутствует КоммерческаяИнформация.Каталог');
+        if (!catalog) {
+             addLog(req, `Структура XML: ${Object.keys(importData)}`);
+             throw new Error('Некорректный формат import.xml: Отсутствует КоммерческаяИнформация.Каталог');
+        }
 
         // Parse Categories
         const classifier = importData?.КоммерческаяИнформация?.Классификатор;
@@ -250,7 +262,7 @@ syncS3Router.post('/', async (req, res) => {
         let purchasePriceTypeId = '';
 
         try {
-            const offersXml = await downloadFromS3('1C/offers.xml', config);
+            const offersXml = await downloadFromS3('offers.xml', config);
             const offersData = parser.parse(offersXml);
             
             const packageOffers = offersData?.КоммерческаяИнформация?.ПакетПредложений;
@@ -298,8 +310,11 @@ syncS3Router.post('/', async (req, res) => {
                 let imageUrl = null;
                 if (p.Картинка) {
                     const firstImage = Array.isArray(p.Картинка) ? p.Картинка[0] : p.Картинка;
-                    imageUrl = `${config.endpoint}/${config.bucket}/1C/${firstImage}`;
+                    // Исправляем путь: если картинка начинается с 1C/, оставляем, иначе добавляем
+                    const imgPath = firstImage.startsWith('1C/') ? firstImage : `1C/${firstImage}`;
+                    imageUrl = `${config.endpoint}/${config.bucket}/${imgPath}`;
                 }
+
 
                 const sku = p.Артикул || '';
                 const barcode = p.Штрихкод ? String(p.Штрихкод) : '';
