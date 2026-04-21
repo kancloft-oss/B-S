@@ -25,10 +25,7 @@ export const exchangeRouter = express.Router();
       // Если 1С отправляет файл (POST), перенаправляем его прямо в S3
       if (type === 'catalog' && mode === 'file' && req.method === 'POST' && filename) {
         try {
-          // Всегда сохраняем в 1C/basename(filename)
-          const baseName = (filename as string).split(/[\\/]/).pop();
-          const fileKey = `1C/${baseName}`;
-          
+          const fileKey = (filename as string); // Сохраняем имя как есть
           console.log(`--- UPLOADING TO S3: ${fileKey} ---`);
           
           await uploadRawToS3(req, fileKey, 'application/octet-stream', req.headers['content-length'] as string);
@@ -49,18 +46,11 @@ export const exchangeRouter = express.Router();
   });
 
   // Helper for 1C raw upload
-  // Helper for 1C raw streaming upload (buffered for stability)
+  // Helper for 1C raw streaming upload
   async function uploadRawToS3(stream: import('stream').Readable, key: string, contentType: string, contentLengthStr?: string) {
     const bucket = process.env.S3_BUCKET_NAME || 'brusher-s3';
     const endpoint = process.env.S3_ENDPOINT || 'https://s3.twcstorage.ru';
     
-    // Считываем весь поток в буфер для стабильной загрузки
-    const chunks = [];
-    for await (const chunk of stream) {
-      chunks.push(chunk);
-    }
-    const buffer = Buffer.concat(chunks);
-
     const s3Client = new S3Client({
       endpoint: endpoint,
       region: process.env.S3_REGION || 'ru-1',
@@ -75,11 +65,13 @@ export const exchangeRouter = express.Router();
       await s3Client.send(new PutObjectCommand({
         Bucket: bucket,
         Key: key,
-        Body: buffer,
+        Body: stream,
         ContentType: contentType,
-        ContentLength: buffer.length
+        ContentLength: contentLengthStr ? parseInt(contentLengthStr) : undefined,
+        // Обязательно отключаем чексумму
+        ChecksumAlgorithm: undefined 
       }));
-      console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}, Size: ${buffer.length} bytes`);
+      console.log(`--- S3 UPLOAD SUCCESS --- Key: ${key}`);
     } catch (err: any) {
       console.error('--- S3 UPLOAD ERROR ---', err);
       throw err;
