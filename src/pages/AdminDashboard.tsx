@@ -28,6 +28,7 @@ import ProductMatrixView from './admin/views/ProductMatrixView';
 import AdminUsersView from './admin/views/AdminUsersView';
 import Import1CView from './admin/views/Import1CView';
 import CategoriesView from './admin/views/CategoriesView';
+import SystemLogsView from './admin/views/SystemLogsView';
 
 // --- Main Layout ---
 export function AdminDashboard() {

@@ -59,7 +59,7 @@ export default function Import1CView() {
                const logsData = await logsRes.json();
                const syncLogs = logsData.filter((l: any) => l.path === '/api/1c/upload-xml').map((l: any) => `[${l.time}] ${l.message}`);
                if (syncLogs.length > 0) {
-                 setLogs(syncLogs);
+                 setLogs(syncLogs.map(s => ({id: s + Math.random(), msg: s})));
                  // Check if done
                  if (syncLogs[0].includes("УСПЕШНО ЗАВЕРШЕНА") || syncLogs[0].includes("ОШИБКА ОБРАБОТКИ")) {
                     clearInterval(interval);
@@ -91,7 +91,7 @@ export default function Import1CView() {
   };
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<{id: string, msg: string}[]>([]);
   const [stats, setStats] = useState({
     totalProducts: 0,
     totalCategories: 0,
@@ -127,7 +127,7 @@ export default function Import1CView() {
   };
 
   const addLog = (msg: string) => {
-    setLogs(prev => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+    setLogs(prev => [{id: Date.now().toString() + Math.random(), msg: `[${new Date().toLocaleTimeString()}] ${msg}`}, ...prev]);
   };
 
   const handleImportS3 = async () => {
@@ -151,7 +151,7 @@ export default function Import1CView() {
                // Update UI logs with only sync S3 related logs
                const syncLogs = logsData.filter((l: any) => l.path === '/api/1c/sync-s3').map((l: any) => `[${l.time}] ${l.message}`);
                if (syncLogs.length > 0) {
-                 setLogs(syncLogs);
+                 setLogs(syncLogs.map(s => ({id: s + Math.random(), msg: s})));
                  // Check if done
                  if (syncLogs[0].includes("УСПЕШНО ЗАВЕРШЕНА") || syncLogs[0].includes("ОШИБКА СИНХРОНИЗАЦИИ")) {
                     clearInterval(interval);
@@ -453,11 +453,11 @@ export default function Import1CView() {
                     <p className="italic">Ожидание начала процесса...</p>
                   </div>
                 )}
-                {logs.map((log, i) => (
-                  <div key={i} className="flex gap-3 border-b border-zinc-800/50 pb-2 last:border-0 hover:bg-zinc-800/50 transition-colors">
-                    <span className="text-zinc-600 shrink-0">{log.includes(']') ? log.split(']')[0] + ']' : ''}</span>
-                    <span className={log.includes('ОШИБКА') ? 'text-red-400' : log.includes('УСПЕШНО') ? 'text-emerald-400' : 'text-zinc-300'}>
-                        {log.includes(']') ? log.split(']')[1] : log}
+                {logs.map((log) => (
+                  <div key={log.id} className="flex gap-3 border-b border-zinc-800/50 pb-2 last:border-0 hover:bg-zinc-800/50 transition-colors">
+                    <span className="text-zinc-600 shrink-0">{log.msg.includes(']') ? log.msg.split(']')[0] + ']' : ''}</span>
+                    <span className={log.msg.includes('ОШИБКА') ? 'text-red-400' : log.msg.includes('УСПЕШНО') ? 'text-emerald-400' : 'text-zinc-300'}>
+                        {log.msg.includes(']') ? log.msg.split(']')[1] : log.msg}
                     </span>
                   </div>
                 ))}
