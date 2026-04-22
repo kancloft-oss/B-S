@@ -70,6 +70,19 @@ export async function initializeDatabase() {
         items TEXT,
         "createdAt" TIMESTAMPTZ
       );
+
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        email TEXT UNIQUE,
+        role TEXT DEFAULT 'user',
+        "createdAt" TIMESTAMPTZ
+      );
+
+      CREATE TABLE IF NOT EXISTS auth_codes (
+        email TEXT PRIMARY KEY,
+        code TEXT,
+        expires TIMESTAMPTZ
+      );
     `);
     console.log('Database tables initialized successfully');
   } catch (error) {

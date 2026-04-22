@@ -32,16 +32,14 @@ import SystemLogsView from './admin/views/SystemLogsView';
 
 // --- Main Layout ---
 export function AdminDashboard() {
-  const { user: firebaseUser, signInWithGoogle, signOutUser } = useAuth();
+  const { user: customUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const currentPath = location.pathname;
 
-  const isFirebaseAuthorized = firebaseUser?.email === "kancloft@gmail.com";
-
   const handleLogout = () => {
     localStorage.removeItem("admin_auth");
-    signOutUser();
+    logout();
     navigate("/admin/login");
   };
 

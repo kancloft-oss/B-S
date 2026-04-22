@@ -18,17 +18,19 @@ import { Button } from "./components/ui/button";
 import { SearchBar } from "./components/SearchBar";
 import { seedDatabase } from "./lib/seed-data";
 import { useEffect, useState, useRef } from "react";
+import { AuthModal } from "./components/AuthModal";
 const logo = 'https://s3.twcstorage.ru/brusher-s3/banners/20b225f6-b8c0-4818-967f-733aa00ef6a9.webp';
 
 function AppContent() {
   const { cartCount } = useCart();
-  const { user, signInWithGoogle, signOutUser } = useAuth();
+  const { user } = useAuth();
   const location = useLocation();
   const isMobileCartOrCheckout = location.pathname === '/cart' || location.pathname === '/checkout';
   const isAdmin = user?.email === 'kancloft@gmail.com' || localStorage.getItem("admin_auth") === "true";
   const isAdminPage = location.pathname.startsWith('/admin');
   
   const [isHeaderHidden, setIsHeaderHidden] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const lastScrollY = useRef(0);
 
   const [categories, setCategories] = useState<{id: string, name: string, parentId: string|null}[]>([]);
@@ -151,7 +153,7 @@ function AppContent() {
               <span className="text-[11px] font-medium hidden sm:block">Корзина</span>
             </Link>
             <button 
-              onClick={() => user ? window.location.href = '/account' : signInWithGoogle()}
+              onClick={() => user ? window.location.href = '/account' : setIsAuthModalOpen(true)}
               className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-6 py-2.5 rounded-md font-bold text-sm transition-colors ml-2"
             >
               Войти
@@ -264,7 +266,7 @@ function AppContent() {
           </div>
         </Link>
         <button 
-          onClick={() => user ? window.location.href = '/account' : signInWithGoogle()}
+          onClick={() => user ? window.location.href = '/account' : setIsAuthModalOpen(true)}
           className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname.startsWith('/account') && !location.search.includes('favorites') ? 'text-zinc-900' : 'text-zinc-400'}`}
         >
           <div className="flex flex-col items-center justify-center h-full pt-1">
@@ -280,6 +282,8 @@ function AppContent() {
           &copy; {new Date().getFullYear()} АртИнструмент. Все права защищены.
         </div>
       </footer>
+
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );
 }

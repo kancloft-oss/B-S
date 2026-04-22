@@ -1,44 +1,79 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, signInWithPopup, GoogleAuthProvider, signOut, onAuthStateChanged } from 'firebase/auth';
-import { auth } from '../firebase';
+
+export interface User {
+  id: string;
+  email: string;
+  role: string;
+}
 
 interface AuthContextType {
   user: User | null;
+  token: string | null;
   loading: boolean;
-  signInWithGoogle: () => Promise<void>;
-  signOutUser: () => Promise<void>;
+  login: (token: string, user: User) => void;
+  logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
+  token: null,
   loading: true,
-  signInWithGoogle: async () => {},
-  signOutUser: async () => {},
+  login: () => {},
+  logout: () => {},
 });
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('auth_token'));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
-    return unsubscribe;
-  }, []);
+    const fetchUser = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
 
-  const signInWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+      try {
+        const res = await fetch('/api/auth/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        } else {
+          // Token invalid or expired
+          localStorage.removeItem('auth_token');
+          setToken(null);
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Failed to fetch user', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [token]);
+
+  const login = (newToken: string, newUser: User) => {
+    localStorage.setItem('auth_token', newToken);
+    setToken(newToken);
+    setUser(newUser);
   };
 
-  const signOutUser = async () => {
-    await signOut(auth);
+  const logout = () => {
+    localStorage.removeItem('auth_token');
+    setToken(null);
+    setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signInWithGoogle, signOutUser }}>
+    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
       {!loading && children}
     </AuthContext.Provider>
   );

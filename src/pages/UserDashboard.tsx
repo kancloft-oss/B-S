@@ -42,50 +42,48 @@ export default function UserDashboard() {
   const { favorites, cart, addToCart, updateQuantity, toggleFavorite } = useCart();
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
 
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const userId = auth.currentUser?.uid;
-    if (!userId) {
+    if (!user) {
       setLoading(false);
       return;
     }
 
-    const q = query(collection(db, "orders"), where("userId", "==", userId));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
+    const fetchOrders = async () => {
       try {
-        const ordersData = await Promise.all(snapshot.docs.map(async (orderDoc) => {
-          const orderData = orderDoc.data() as Omit<Order, 'id'>;
-          
-          const itemsWithProducts = await Promise.all(orderData.items.map(async (item) => {
-            try {
-              const productDoc = await getDoc(doc(db, "products", item.productId));
-              if (productDoc.exists()) {
-                const pData = productDoc.data();
-                return { ...item, product: { name: pData.name, price: pData.price, image: pData.image } };
-              }
-            } catch (e) {
-              console.error("Error fetching product for order item", e);
-            }
-            return item;
-          }));
-
-          return {
-            id: orderDoc.id,
-            ...orderData,
-            items: itemsWithProducts
-          };
-        }));
-        
-        ordersData.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        setOrders(ordersData);
+        const res = await fetch(`/api/orders?userId=${user.id}`);
+        if(res.ok) {
+           const data = await res.json();
+           
+           // Fetch product details for items
+           const ordersData = await Promise.all(data.map(async (order: any) => {
+             const itemsWithProducts = await Promise.all((order.items || []).map(async (item: any) => {
+               let productData;
+               try {
+                 const pRes = await fetch(`/api/products/${item.productId}`);
+                 if (pRes.ok) {
+                   const pd = await pRes.json();
+                   productData = { name: pd.name, price: pd.price, image: pd.image };
+                 }
+               } catch (err) {}
+               return { ...item, product: productData };
+             }));
+             return { ...order, items: itemsWithProducts } as Order;
+           }));
+           
+           setOrders(ordersData);
+        }
       } catch (error) {
-        console.error("Error processing orders:", error);
+        console.error("Error fetching orders:", error);
       } finally {
         setLoading(false);
       }
-    });
+    };
 
-    return () => unsubscribe();
-  }, []);
+    fetchOrders();
+  }, [user]);
 
   useEffect(() => {
     if (activeTab === "favorites") {
@@ -95,10 +93,11 @@ export default function UserDashboard() {
           return;
         }
         try {
-          const productsRef = collection(db, "products");
-          const snapshot = await getDocs(productsRef);
-          const allProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-          setFavoriteProducts(allProducts.filter(p => favorites.includes(p.id)));
+          const res = await fetch(`/api/products?limit=1000`);
+          if (res.ok) {
+              const allProducts: Product[] = await res.json();
+              setFavoriteProducts(allProducts.filter(p => favorites.includes(p.id)));
+          }
         } catch (error) {
           console.error("Error fetching favorite products:", error);
         }
@@ -111,13 +110,22 @@ export default function UserDashboard() {
     setPayingOrder(orderId);
     try {
       await new Promise(resolve => setTimeout(resolve, 1500));
-      const orderRef = doc(db, "orders", orderId);
-      await updateDoc(orderRef, { status: "paid" });
+      await fetch(`/api/orders/${orderId}`, {
+         method: 'PUT',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ status: "paid" })
+      });
+      setOrders(orders.map(o => o.id === orderId ? { ...o, status: "paid" } : o));
     } catch (error) {
       console.error("Payment error:", error);
     } finally {
       setPayingOrder(null);
     }
+  };
+
+  const handleLogout = () => {
+      logout();
+      navigate('/');
   };
 
   if (loading) {
@@ -133,7 +141,7 @@ export default function UserDashboard() {
       {/* Desktop Header */}
       <div className="hidden md:flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Личный кабинет</h1>
-        <button className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
+        <button onClick={handleLogout} className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-900 transition-colors">
           <LogOut className="w-4 h-4" />
           <span>Выйти</span>
         </button>
@@ -144,17 +152,17 @@ export default function UserDashboard() {
         <div className="md:col-span-1 space-y-4">
           {/* Profile Card */}
           <div className="bg-zinc-900 text-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm flex items-center md:flex-col md:text-center gap-4 md:gap-0">
-            <div className="w-14 h-14 md:w-20 md:h-20 bg-brand-orange text-white rounded-full flex items-center justify-center font-black text-xl md:text-2xl md:mb-4 shrink-0">
-              ИИ
+            <div className="w-14 h-14 md:w-20 md:h-20 bg-brand-orange text-white rounded-full flex items-center justify-center font-black text-xl md:text-2xl md:mb-4 shrink-0 uppercase">
+              {user?.email?.[0] || 'П'}
             </div>
             <div className="flex-1 md:w-full min-w-0">
-              <h2 className="font-black text-lg md:text-xl leading-tight md:mb-1 truncate uppercase tracking-tight">Иван Иванов</h2>
-              <p className="text-zinc-400 text-sm mb-1 md:mb-4 truncate font-medium">+7 (999) 123-45-67</p>
+              <h2 className="font-black text-lg md:text-xl leading-tight md:mb-1 truncate tracking-tight">{user?.email?.split('@')[0]}</h2>
+              <p className="text-zinc-400 text-sm mb-1 md:mb-4 truncate font-medium">{user?.email}</p>
               <button className="text-white text-xs md:text-sm font-bold bg-brand-orange hover:bg-brand-orange-light px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-colors md:w-full truncate uppercase tracking-tight">
-                Редактировать
+                Настройки
               </button>
             </div>
-            <button className="md:hidden p-2.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-xl shrink-0">
+            <button onClick={handleLogout} className="md:hidden p-2.5 text-zinc-400 hover:text-white bg-zinc-800 rounded-xl shrink-0">
               <LogOut className="w-5 h-5" />
             </button>
           </div>

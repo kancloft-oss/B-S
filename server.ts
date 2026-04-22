@@ -16,6 +16,7 @@ import { ordersRouter } from './server/routes/orders.js';
 import { exchangeRouter } from './server/routes/exchange.js';
 import { statsRouter } from './server/routes/stats.js';
 import { syncS3Router } from './server/routes/syncS3.js';
+import { authRouter } from './server/routes/auth.js';
 
 async function startServer() {
   await initializeDatabase();
@@ -63,6 +64,7 @@ async function startServer() {
   app.use('/api/categories', categoriesRouter);
   app.use('/api/orders', ordersRouter);
   app.use('/api/stats', statsRouter);
+  app.use('/api/auth', authRouter);
 
   // Middleware Vite (всегда должно быть после API-маршрутов)
   if (process.env.NODE_ENV !== "production") {
