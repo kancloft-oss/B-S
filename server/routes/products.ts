@@ -70,6 +70,101 @@ productsRouter.get('/', async (req, res) => {
     }
   });
 
+  productsRouter.get('/:id/complements', async (req, res) => {
+    try {
+      const result = await db.query('SELECT name, "categoryId" FROM products WHERE id = $1', [req.params.id]);
+      if (result.rows.length === 0) return res.json([]);
+      const product = result.rows[0];
+      const pName = (product.name || '').toLowerCase();
+      
+      const rules = [
+        { triggers: ['масл', 'маслян'], targets: ['холст', 'кист', 'разбавител', 'льнян', 'мастихин', 'палитра', 'масленка', 'мольберт', 'фартук', 'лак'] },
+        { triggers: ['акварел'], targets: ['бумаг', 'кист', 'белк', 'колонок', 'палитра', 'стакан', 'маскирующ', 'скотч', 'планшет'] },
+        { triggers: ['акрил'], targets: ['холст', 'картон', 'кист', 'палитра', 'замедлител', 'лак', 'мастихин', 'паст', 'грунт'] },
+        { triggers: ['гуашь'], targets: ['бумаг', 'картон', 'кист', 'пони', 'щетина', 'палитра', 'стакан'] },
+        { triggers: ['графит', 'чернографит'], targets: ['ластик', 'клячк', 'точилк', 'скетчбук', 'бумаг', 'пенал', 'тубус'] },
+        { triggers: ['цветн', 'акварельн', 'карандаш'], targets: ['скетчбук', 'бумаг', 'точилк', 'ластик', 'пенал', 'блендер', 'кист'] },
+        { triggers: ['маркер', 'фломастер', 'брашпен'], targets: ['скетчбук', 'маркерн', 'линер', 'ручк', 'пенал'] },
+        { triggers: ['линер', 'капиллярн'], targets: ['скетчбук', 'маркер', 'карандаш', 'ластик'] },
+        { triggers: ['пастель', 'мелок', 'мелки', 'сангин', 'соус', 'уголь', 'сепия'], targets: ['бумаг', 'растушевк', 'клячк', 'фиксатив', 'лак', 'держател'] },
+        { triggers: ['холст'], targets: ['масл', 'акрил', 'кист', 'разбавител', 'мастихин', 'мольберт', 'грунт', 'лак'] },
+        { triggers: ['скетчбук', 'блокнот', 'альбом'], targets: ['карандаш', 'линер', 'маркер', 'ластик', 'точилк', 'брашпен'] },
+        { triggers: ['кист'], targets: ['акварель', 'акрил', 'масл', 'гуашь', 'палитр', 'стакан', 'пенал', 'мыло', 'холст', 'бумаг', 'мастихин'] },
+        { triggers: ['мастихин'], targets: ['масл', 'акрил', 'холст', 'паст', 'палитр', 'грунт', 'масленк', 'мольберт', 'кист'] },
+        { triggers: ['мольберт', 'этюдник', 'треног'], targets: ['холст', 'планшет', 'масл', 'акрил', 'масленк', 'пенал', 'стул', 'сумка', 'палитр'] },
+        { triggers: ['планшет'], targets: ['бумаг', 'кнопк', 'зажим', 'скотч', 'карандаш', 'акварель', 'кист'] },
+        { triggers: ['разбавител', 'лак', 'пинен', 'масло льнян'], targets: ['масл', 'масленк', 'кист', 'мастихин', 'холст', 'акрил'] },
+        { triggers: ['масленк'], targets: ['разбавител', 'масл', 'льнян', 'палитр', 'мастихин', 'кист', 'мольберт'] },
+        { triggers: ['палитр'], targets: ['масл', 'мастихин', 'масленк', 'разбавител', 'акварель', 'гуашь', 'акрил', 'кист', 'холст'] },
+        { triggers: ['паст', 'гель', 'текстурн'], targets: ['акрил', 'мастихин', 'холст', 'трафарет', 'грунт'] },
+        { triggers: ['ластик', 'клячк'], targets: ['карандаш', 'пастель', 'уголь', 'бумаг', 'точилк', 'скетчбук'] },
+        { triggers: ['точилк'], targets: ['карандаш', 'ластик', 'пенал', 'скетчбук', 'цветн'] },
+        { triggers: ['глина', 'пластилин', 'скульптур'], targets: ['стек', 'доск', 'проволок', 'инструмент', 'лак'] },
+        { triggers: ['стек', 'скульптурн'], targets: ['глин', 'пластилин', 'масс', 'доск'] },
+        { triggers: ['пенал', 'скрутк'], targets: ['карандаш', 'маркер', 'кист', 'линер', 'ластик', 'ручк'] },
+        { triggers: ['тубус', 'папк'], targets: ['бумаг', 'ватман', 'карандаш', 'линейк', 'планшет', 'скетчбук'] },
+        { triggers: ['фартук', 'нарукавник'], targets: ['краск', 'масл', 'акрил', 'гуашь', 'глин', 'мольберт'] },
+        { triggers: ['тушь', 'перья', 'каллиграф'], targets: ['бумаг', 'держател', 'кист', 'брашпен', 'баночк', 'линер'] },
+        { triggers: ['скотч', 'зажим', 'кнопк'], targets: ['бумаг', 'планшет', 'акварель', 'кист', 'мольберт'] },
+        { triggers: ['смол', 'эпоксидн'], targets: ['красител', 'молд', 'формочк', 'глиттер', 'перчатк', 'стакан'] },
+        { triggers: ['скрапбукинг', 'декупаж'], targets: ['клей', 'салфетк', 'заготовк', 'ножниц', 'нож', 'коврик'] }
+      ];
+
+      let matchedTargets: string[] = [];
+      for (const rule of rules) {
+        if (rule.triggers.some(t => pName.includes(t))) {
+          matchedTargets = matchedTargets.concat(rule.targets);
+        }
+      }
+      
+      let complements: any[] = [];
+      
+      if (matchedTargets.length > 0) {
+        // Unique targets
+        matchedTargets = [...new Set(matchedTargets)];
+        
+        let targetConditions = matchedTargets.map((_, i) => `name ILIKE $${i + 2}`).join(' OR ');
+        
+        const queryParams = [product.categoryId || 'null_cat', ...matchedTargets.map(t => `%${t}%`)];
+        const complementQuery = `
+          SELECT * FROM products 
+          WHERE ("categoryId" != $1 OR "categoryId" IS NULL) 
+          AND (${targetConditions})
+          LIMIT 20
+        `;
+        const compRes = await db.query(complementQuery, queryParams);
+        
+        // Take at most 1-2 per target type to ensure variety
+        const variety: any[] = [];
+        for (const target of matchedTargets) {
+            const matchesForTarget = compRes.rows.filter((r: any) => (r.name || '').toLowerCase().includes(target));
+            variety.push(...matchesForTarget.slice(0, 2));
+        }
+        complements = variety;
+      }
+      
+      // Fallback
+      if (complements.length < 4) {
+         try {
+           const fallbackRes = await db.query(`SELECT * FROM products WHERE id != $1 ORDER BY RANDOM() LIMIT 8`, [req.params.id]);
+           complements = [...complements, ...fallbackRes.rows];
+         } catch(e) {} // ignore fallback error
+      }
+      
+      // Deduplicate by ID and slice to max 8 items
+      const uniqueComps = Array.from(new Map(complements.map(item => [item.id, item])).values()).slice(0, 8);
+      
+      const safeComps = uniqueComps.map(row => {
+          const { purchasePrice, ...clientProduct } = row;
+          return clientProduct;
+      });
+
+      res.json(safeComps);
+    } catch (e) {
+      res.status(500).json({ error: (e as Error).message });
+    }
+  });
+
   productsRouter.get('/:id', async (req, res) => {
     try {
       const result = await db.query('SELECT * FROM products WHERE id = $1', [req.params.id]);

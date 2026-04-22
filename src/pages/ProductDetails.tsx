@@ -9,16 +9,25 @@ export function ProductDetails() {
   const navigate = useNavigate();
   const [product, setProduct] = useState<any>(null);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [complementaryProducts, setComplementaryProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [activeTab, setActiveTab] = useState("characteristics");
   const similarScrollRef = React.useRef<HTMLDivElement>(null);
+  const complementaryScrollRef = React.useRef<HTMLDivElement>(null);
 
   const scrollSimilar = (dir: 'left' | 'right') => {
     if (similarScrollRef.current) {
       const scrollAmount = 300;
       similarScrollRef.current.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  const scrollComplementary = (dir: 'left' | 'right') => {
+    if (complementaryScrollRef.current) {
+      const scrollAmount = 300;
+      complementaryScrollRef.current.scrollBy({ left: dir === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
     }
   };
 
@@ -46,6 +55,15 @@ export function ProductDetails() {
               setSimilarProducts(similar.filter((p: any) => p.id !== id).slice(0, 8));
             }
           }
+          
+          // Fetch complementary products
+          try {
+            const compRes = await fetch(`/api/products/${id}/complements`);
+            if (compRes.ok) {
+              const complements = await compRes.json();
+              setComplementaryProducts(complements);
+            }
+          } catch (e) { console.error(e); }
           
           // Fetch categories for breadcrumbs
           const catRes = await fetch(`/api/categories`);
@@ -391,11 +409,11 @@ export function ProductDetails() {
         </div>
       </div>
 
-      {/* Similar Products */}
+      {/* Similar Products (Now Analogous) */}
       {similarProducts.length > 0 && (
-        <div className="relative group mt-8">
+        <div className="relative group mt-8 mb-12">
           <div className="flex items-baseline gap-4 mb-6">
-            <h2 className="text-[26px] md:text-[32px] font-bold text-zinc-900 tracking-tight">Сопутствующие товары</h2>
+            <h2 className="text-[26px] md:text-[32px] font-bold text-zinc-900 tracking-tight">Аналогичные товары</h2>
             <Link to={`/catalog?category=${encodeURIComponent(product.category)}`} className="text-[17px] text-zinc-500 hover:text-zinc-900 transition-colors">
               Смотреть все
             </Link>
@@ -496,6 +514,117 @@ export function ProductDetails() {
                       <Star className="w-4 h-4 fill-[#E30613] text-[#E30613]" />
                       <span className="font-bold text-zinc-900">4.3</span>
                       <span className="text-zinc-500">(18)</span>
+                    </div>
+
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Complementary Products */}
+      {complementaryProducts.length > 0 && (
+        <div className="relative group mt-8 mb-12">
+          <div className="flex items-baseline gap-4 mb-6">
+            <h2 className="text-[26px] md:text-[32px] font-bold text-zinc-900 tracking-tight">Сопутствующие товары</h2>
+          </div>
+          
+          <div className="relative">
+            {/* Nav Arrows */}
+            <button 
+              onClick={(e) => { e.preventDefault(); scrollComplementary("left"); }}
+              className="hidden md:flex absolute top-[110px] -left-6 z-10 w-12 h-12 bg-white rounded-full items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-zinc-100 text-zinc-900 hover:text-brand-red opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronLeft className="w-6 h-6 ml-[-2px]" />
+            </button>
+            <button 
+              onClick={(e) => { e.preventDefault(); scrollComplementary("right"); }}
+              className="hidden md:flex absolute top-[110px] -right-6 z-10 w-12 h-12 bg-white rounded-full items-center justify-center shadow-[0_4px_24px_rgba(0,0,0,0.12)] border border-zinc-100 text-zinc-900 hover:text-brand-red opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <ChevronRight className="w-6 h-6 mr-[-2px]" />
+            </button>
+
+            <div 
+              ref={complementaryScrollRef}
+              className="flex gap-2 overflow-x-auto scrollbar-hide snap-x pb-8"
+              style={{ scrollBehavior: 'smooth' }}
+            >
+              {complementaryProducts.map(comp => {
+                const simInCart = cart.find(item => item.id === comp.id);
+                const discount = Math.floor(Math.random() * 20) + 10;
+                
+                return (
+                  <Link 
+                    key={comp.id} 
+                    to={`/product/${comp.id}`} 
+                    className="group bg-transparent hover:bg-white rounded-[20px] p-4 flex flex-col hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all relative w-[220px] lg:w-[240px] shrink-0 snap-start"
+                  >
+                    
+                    {/* Image Area */}
+                    <div className="relative aspect-square mb-4">
+                      <img src={comp.image || undefined} alt={comp.name} className="w-full h-full object-contain p-2" />
+                      
+                      {/* Hover Actions (Top Right) */}
+                      <div className="absolute top-0 right-0 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(comp.id); }}
+                          className="p-1.5 text-zinc-400 hover:text-brand-red transition-colors"
+                        >
+                          <Heart className={`w-6 h-6 ${favorites.includes(comp.id) ? 'fill-brand-red text-brand-red' : ''}`} strokeWidth={1.5} />
+                        </button>
+                        <button 
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                          className="p-1.5 text-zinc-400 hover:text-brand-red transition-colors"
+                        >
+                          <BarChart2 className="w-6 h-6" strokeWidth={2} />
+                        </button>
+                      </div>
+
+                      {/* Badge (Bottom Left) */}
+                      <div className="absolute bottom-0 left-0 bg-[#34A853] text-white font-bold text-[13px] px-2 py-1 rounded-md">
+                        -{discount}%
+                      </div>
+                    </div>
+                    
+                    {/* Price Row */}
+                    <div className="flex items-center justify-between mb-3 min-h-[44px]">
+                      <div className="text-[22px] md:text-[24px] font-bold text-zinc-900 tracking-tight">{comp.price} ₽</div>
+                      
+                      {/* Cart Button */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                        {simInCart ? (
+                           <div className="flex flex-col bg-white rounded-xl h-11 w-11 border-2 border-brand-red items-center justify-center overflow-hidden" onClick={(e) => e.preventDefault()}>
+                             <button onClick={(e) => { e.preventDefault(); updateQuantity(comp.id, 1); }} className="h-1/2 w-full flex items-center justify-center hover:bg-zinc-100 text-brand-red">
+                               <Plus className="w-3 h-3" strokeWidth={3} />
+                             </button>
+                             <div className="h-[1px] w-full bg-brand-red"></div>
+                             <button onClick={(e) => { e.preventDefault(); updateQuantity(comp.id, -1); }} className="h-1/2 w-full flex items-center justify-center hover:bg-zinc-100 text-brand-red">
+                               <Minus className="w-3 h-3" strokeWidth={3} />
+                             </button>
+                           </div>
+                        ) : (
+                          <button 
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(comp); }}
+                            className="bg-[#D10000] hover:bg-[#B30000] text-white rounded-xl w-11 h-11 flex items-center justify-center transition-colors shadow-sm"
+                          >
+                            <ShoppingCart className="w-5 h-5 ml-[-2px]" fill="currentColor" strokeWidth={0} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-[14px] text-zinc-900 leading-[1.4] line-clamp-3 mb-2 flex-1">
+                      {comp.name}
+                    </h3>
+                    
+                    {/* Rating */}
+                    <div className="flex items-center gap-1.5 mt-auto text-[14px]">
+                      <Star className="w-4 h-4 fill-[#E30613] text-[#E30613]" />
+                      <span className="font-bold text-zinc-900">4.9</span>
+                      <span className="text-zinc-500">(12)</span>
                     </div>
 
                   </Link>
