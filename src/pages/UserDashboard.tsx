@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Package, CreditCard, Clock, CheckCircle2, Truck, AlertCircle, ChevronRight, LogOut, MapPin, Heart, Plus, Minus, ShoppingCart, Star } from "lucide-react";
 import { useCart, Product } from "@/src/lib/cart-context";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/src/components/ui/button";
-import { collection, getDocs, query, where, doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
-import { db, auth } from "@/src/firebase";
+import { useAuth } from "@/src/lib/auth-context";
 
 interface OrderItem {
   productId: string;
@@ -42,8 +41,27 @@ export default function UserDashboard() {
   const { favorites, cart, addToCart, updateQuantity, toggleFavorite } = useCart();
   const [favoriteProducts, setFavoriteProducts] = useState<Product[]>([]);
 
-  const { user, logout } = useAuth();
+  const { user, logout, token, setUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    fullName: user?.fullName || '',
+    phone: user?.phone || '',
+    address: user?.address || ''
+  });
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        fullName: user.fullName || '',
+        phone: user.phone || '',
+        address: user.address || ''
+      });
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -128,6 +146,35 @@ export default function UserDashboard() {
       navigate('/');
   };
 
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaveLoading(true);
+    setSaveMessage('');
+    try {
+      const res = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(formData)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setUser(data.user);
+        setSaveMessage('Профиль успешно обновлен!');
+        setIsEditing(false);
+        setTimeout(() => setSaveMessage(''), 3000);
+      } else {
+        setSaveMessage('Ошибка обновления профиля.');
+      }
+    } catch {
+      setSaveMessage('Ошибка сети.');
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -156,9 +203,9 @@ export default function UserDashboard() {
               {user?.email?.[0] || 'П'}
             </div>
             <div className="flex-1 md:w-full min-w-0">
-              <h2 className="font-black text-lg md:text-xl leading-tight md:mb-1 truncate tracking-tight">{user?.email?.split('@')[0]}</h2>
-              <p className="text-zinc-400 text-sm mb-1 md:mb-4 truncate font-medium">{user?.email}</p>
-              <button className="text-white text-xs md:text-sm font-bold bg-brand-orange hover:bg-brand-orange-light px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-colors md:w-full truncate uppercase tracking-tight">
+              <h2 className="font-black text-lg md:text-xl leading-tight md:mb-1 truncate tracking-tight">{user?.fullName || user?.email?.split('@')[0]}</h2>
+              <p className="text-zinc-400 text-sm mb-1 md:mb-4 truncate font-medium">{user?.phone || user?.email}</p>
+              <button onClick={() => {setActiveTab("settings"); setIsEditing(true);}} className="text-white text-xs md:text-sm font-bold bg-brand-orange hover:bg-brand-orange-light px-3 py-1.5 md:py-2 rounded-lg md:rounded-xl transition-colors md:w-full truncate uppercase tracking-tight">
                 Настройки
               </button>
             </div>
@@ -177,8 +224,8 @@ export default function UserDashboard() {
               <div className="flex items-center gap-3"><Heart className="w-5 h-5" /> Избранное</div>
               <ChevronRight className="w-4 h-4" />
             </button>
-            <button onClick={() => setActiveTab("addresses")} className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${activeTab === "addresses" ? "bg-brand-gray text-zinc-900 border-l-4 border-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
-              <div className="flex items-center gap-3"><MapPin className="w-5 h-5" /> Адреса доставки</div>
+            <button onClick={() => {setActiveTab("settings"); setIsEditing(false);}} className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${activeTab === "settings" || activeTab === "addresses" ? "bg-brand-gray text-zinc-900 border-l-4 border-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
+              <div className="flex items-center gap-3"><MapPin className="w-5 h-5" /> Профиль и адреса</div>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -191,8 +238,8 @@ export default function UserDashboard() {
             <button onClick={() => setActiveTab("favorites")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-bold transition-all min-w-0 ${activeTab === "favorites" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
               <Heart className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center uppercase tracking-tight">Избранное</span>
             </button>
-            <button onClick={() => setActiveTab("addresses")} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-bold transition-all min-w-0 ${activeTab === "addresses" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
-              <MapPin className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center uppercase tracking-tight">Адреса</span>
+            <button onClick={() => {setActiveTab("settings"); setIsEditing(false);}} className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-bold transition-all min-w-0 ${activeTab === "settings" || activeTab === "addresses" ? "bg-white text-zinc-900 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>
+              <MapPin className="w-5 h-5 mb-1 shrink-0" /> <span className="truncate w-full px-1 text-center uppercase tracking-tight">Профиль</span>
             </button>
           </div>
         </div>
@@ -367,11 +414,84 @@ export default function UserDashboard() {
             </div>
           )}
 
-          {activeTab === "addresses" && (
-            <div className="bg-white p-8 rounded-2xl md:rounded-3xl shadow-sm border border-zinc-100 text-center">
-              <MapPin className="w-12 h-12 text-zinc-200 mx-auto mb-4" />
-              <h3 className="text-lg font-bold mb-2">Нет сохраненных адресов</h3>
-              <p className="text-zinc-500 text-sm">Адреса доставки появятся здесь после первого заказа</p>
+          {(activeTab === "settings" || activeTab === "addresses") && (
+            <div className="bg-white p-6 md:p-8 rounded-2xl md:rounded-3xl shadow-sm border border-zinc-100">
+              <h3 className="text-xl md:text-2xl font-bold mb-6">Настройки профиля</h3>
+              
+              {saveMessage && (
+                <div className={`p-4 rounded-xl mb-6 text-sm font-medium ${saveMessage.includes('Ошибка') ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                  {saveMessage}
+                </div>
+              )}
+
+              <form onSubmit={handleSaveProfile} className="space-y-4 max-w-lg">
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 mb-1.5 uppercase tracking-wide">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={user?.email || ''}
+                    disabled
+                    className="w-full px-4 py-2.5 bg-zinc-100 border-none rounded-xl text-zinc-500 font-medium"
+                    readOnly
+                  />
+                  <p className="text-[10px] text-zinc-400 mt-1">Email нельзя изменить</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 mb-1.5 uppercase tracking-wide">
+                    ФИО
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.fullName}
+                    onChange={(e) => setFormData({...formData, fullName: e.target.value})}
+                    placeholder="Иванов Иван Иванович"
+                    className="w-full px-4 py-2.5 bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange rounded-xl outline-none transition-all placeholder:text-zinc-400 font-medium text-zinc-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 mb-1.5 uppercase tracking-wide">
+                    Телефон
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+7 (999) 000-00-00"
+                    className="w-full px-4 py-2.5 bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange rounded-xl outline-none transition-all placeholder:text-zinc-400 font-medium text-zinc-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-zinc-700 mb-1.5 uppercase tracking-wide">
+                    Адрес доставки
+                  </label>
+                  <textarea
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    placeholder="г. Махачкала, ул. Примерная, д. 1, кв. 2"
+                    rows={3}
+                    className="w-full px-4 py-2.5 bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange rounded-xl outline-none transition-all placeholder:text-zinc-400 font-medium text-zinc-900 resize-none"
+                  />
+                </div>
+
+                <div className="pt-4">
+                  <button
+                    type="submit"
+                    disabled={saveLoading}
+                    className="bg-brand-orange hover:bg-brand-orange-light text-white px-8 py-3 rounded-xl font-bold uppercase tracking-wide transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {saveLoading ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      'Сохранить изменения'
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>

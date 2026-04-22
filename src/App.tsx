@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate, useNavigate } from "react-router-dom";
 import { Storefront } from "./pages/Storefront";
 import { ProductDetails } from "./pages/ProductDetails";
 import { AdminDashboard } from "./pages/AdminDashboard";
@@ -23,8 +23,9 @@ const logo = 'https://s3.twcstorage.ru/brusher-s3/banners/20b225f6-b8c0-4818-967
 
 function AppContent() {
   const { cartCount } = useCart();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobileCartOrCheckout = location.pathname === '/cart' || location.pathname === '/checkout';
   const isAdmin = user?.email === 'kancloft@gmail.com' || localStorage.getItem("admin_auth") === "true";
   const isAdminPage = location.pathname.startsWith('/admin');
@@ -121,7 +122,7 @@ function AppContent() {
             </div>
           </Link>
           
-          <Button className="bg-zinc-600 hover:bg-zinc-700 text-white gap-2 hidden md:flex shrink-0 rounded-md h-11 px-6 font-bold text-base transition-colors shadow-none" onClick={() => window.location.href = '/catalog'}>
+          <Button className="bg-zinc-600 hover:bg-zinc-700 text-white gap-2 hidden md:flex shrink-0 rounded-md h-11 px-6 font-bold text-base transition-colors shadow-none" onClick={() => navigate('/catalog')}>
             <Menu className="w-5 h-5" />
             Каталог
           </Button>
@@ -153,7 +154,7 @@ function AppContent() {
               <span className="text-[11px] font-medium hidden sm:block">Корзина</span>
             </Link>
             <button 
-              onClick={() => user ? window.location.href = '/account' : setIsAuthModalOpen(true)}
+              onClick={() => user ? navigate('/account') : setIsAuthModalOpen(true)}
               className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-6 py-2.5 rounded-md font-bold text-sm transition-colors ml-2"
             >
               Войти
@@ -230,7 +231,13 @@ function AppContent() {
           <Route path="/product/:id" element={<ProductDetails />} />
           <Route path="/cart" element={<Storefront view="cart" />} />
           <Route path="/checkout" element={<Storefront view="checkout" />} />
-          <Route path="/account/*" element={user ? <UserDashboard /> : <Navigate to="/" replace />} />
+          <Route path="/account/*" element={
+            loading ? (
+              <div className="flex items-center justify-center p-20">
+                <div className="w-8 h-8 border-4 border-brand-orange border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : user ? <UserDashboard /> : <Navigate to="/" replace />
+          } />
         </Routes>
       </main>
 
@@ -266,7 +273,7 @@ function AppContent() {
           </div>
         </Link>
         <button 
-          onClick={() => user ? window.location.href = '/account' : setIsAuthModalOpen(true)}
+          onClick={() => user ? navigate('/account') : setIsAuthModalOpen(true)}
           className={`flex flex-col items-center justify-center w-full h-full relative ${location.pathname.startsWith('/account') && !location.search.includes('favorites') ? 'text-zinc-900' : 'text-zinc-400'}`}
         >
           <div className="flex flex-col items-center justify-center h-full pt-1">

@@ -75,6 +75,9 @@ export async function initializeDatabase() {
         id TEXT PRIMARY KEY,
         email TEXT UNIQUE,
         role TEXT DEFAULT 'user',
+        "fullName" TEXT,
+        phone TEXT,
+        address TEXT,
         "createdAt" TIMESTAMPTZ
       );
 
@@ -84,6 +87,16 @@ export async function initializeDatabase() {
         expires TIMESTAMPTZ
       );
     `);
+
+    // Migrate existing users table safely
+    try {
+      await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "fullName" TEXT;`);
+      await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;`);
+      await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;`);
+    } catch(err) {
+      console.log('Migration note:', err);
+    }
+
     console.log('Database tables initialized successfully');
   } catch (error) {
     console.error('Error initializing database tables:', error);

@@ -126,7 +126,7 @@ authRouter.get('/me', async (req, res) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET) as any;
 
-        const userResult = await db.query('SELECT id, email, role FROM users WHERE id = $1', [decoded.id]);
+        const userResult = await db.query('SELECT id, email, role, "fullName", phone, address FROM users WHERE id = $1', [decoded.id]);
         if (userResult.rows.length === 0) {
             return res.status(404).json({ error: 'Пользователь не найден' });
         }
@@ -134,5 +134,31 @@ authRouter.get('/me', async (req, res) => {
         res.json({ user: userResult.rows[0] });
     } catch (error) {
         res.status(401).json({ error: 'Недействительный токен' });
+    }
+});
+
+authRouter.put('/me', async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ error: 'Неавторизован' });
+        }
+
+        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, JWT_SECRET) as any;
+
+        const { fullName, phone, address } = req.body;
+
+        await db.query(`
+            UPDATE users 
+            SET "fullName" = $1, phone = $2, address = $3
+            WHERE id = $4
+        `, [fullName, phone, address, decoded.id]);
+
+        const userResult = await db.query('SELECT id, email, role, "fullName", phone, address FROM users WHERE id = $1', [decoded.id]);
+        
+        res.json({ user: userResult.rows[0], success: true });
+    } catch (error) {
+        res.status(401).json({ error: 'Ошибка обновления профиля' });
     }
 });
