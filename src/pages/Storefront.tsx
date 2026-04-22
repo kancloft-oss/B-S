@@ -40,6 +40,15 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
   const [error, setError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const navigate = useNavigate();
+  const categoryScrollRef = React.useRef<HTMLDivElement>(null);
+
+  const scrollCategories = (direction: 'left' | 'right') => {
+    if (categoryScrollRef.current) {
+      // Get the width of one item roughly (assuming lg screen is 16.666% of container)
+      const scrollAmount = categoryScrollRef.current.clientWidth * (2/3); // scroll 4 items at a time
+      categoryScrollRef.current.scrollBy({ left: direction === 'left' ? -scrollAmount : scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -201,23 +210,42 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
     return (
       <div className="max-w-7xl mx-auto px-4 py-6 pb-24">
         {/* Top Category Grid */}
-        <div className="grid grid-rows-2 grid-flow-col gap-3 overflow-x-auto snap-x no-scrollbar pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid-rows-none md:grid-cols-4 lg:grid-cols-8 md:grid-flow-row mb-8 md:mb-10">
-          {categories.slice(0, 8).map((cat) => (
-            <Link 
-              key={cat.id || cat.name}
-              to={`/category/${cat.name}`}
-              className="bg-[#f2f2f2] rounded-xl p-3 md:p-4 flex flex-col relative overflow-hidden group h-32 md:h-40 min-w-[140px] w-[140px] md:min-w-0 md:w-auto snap-start hover:bg-[#e8e8e8] transition-colors"
-            >
-              <span className="text-sm md:text-base font-bold text-zinc-900 leading-tight z-10 w-full mb-auto">{cat.name}</span>
-              <div className="absolute inset-x-0 bottom-0 h-3/5 flex items-end justify-center">
-                 <img 
-                   src={cat.image} 
-                   alt={cat.name} 
-                   className="w-full h-full object-contain object-bottom mix-blend-multiply group-hover:scale-105 transition-transform duration-300 px-2"
-                 />
-              </div>
-            </Link>
-          ))}
+        <div className="relative mb-8 md:mb-12">
+          {/* Desktop scroll buttons */}
+          <button 
+            onClick={() => scrollCategories('left')}
+            className="hidden lg:flex absolute -left-5 top-1/2 -translate-y-1/2 z-10 w-11 h-11 bg-white border border-zinc-200 rounded-full items-center justify-center shadow-sm hover:shadow-md transition-shadow text-zinc-600 hover:text-zinc-900"
+          >
+            <ChevronRight className="w-6 h-6 rotate-180" />
+          </button>
+          <button 
+            onClick={() => scrollCategories('right')}
+            className="hidden lg:flex absolute -right-5 top-1/2 -translate-y-1/2 z-10 w-11 h-11 bg-white border border-zinc-200 rounded-full items-center justify-center shadow-sm hover:shadow-md transition-shadow text-zinc-600 hover:text-zinc-900"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
+
+          <div 
+            ref={categoryScrollRef}
+            className="grid grid-flow-col auto-cols-[calc(50%-6px)] md:auto-cols-[calc(33.333%-10px)] lg:auto-cols-[calc(16.666%-13.33px)] gap-3 md:gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-4 -mx-4 px-4 md:mx-0 md:px-0 scroll-smooth"
+          >
+            {categories.map((cat) => (
+              <Link 
+                key={cat.id || cat.name}
+                to={`/category/${cat.name}`}
+                className="bg-[#f2f3f5] rounded-3xl p-4 md:p-6 flex flex-col relative overflow-hidden group h-40 md:h-[260px] w-full snap-start hover:bg-[#eaecee] transition-colors"
+              >
+                <span className="text-sm md:text-xl font-bold text-zinc-900 leading-tight z-10 w-[85%] mb-auto relative z-20">{cat.name}</span>
+                <div className="absolute inset-x-0 bottom-0 h-[65%] flex items-end justify-center">
+                   <img 
+                     src={cat.image} 
+                     alt={cat.name} 
+                     className="w-full h-full object-contain object-bottom mix-blend-multiply group-hover:scale-105 transition-transform duration-500 origin-bottom"
+                   />
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
 
         {/* Benefits Block */}
