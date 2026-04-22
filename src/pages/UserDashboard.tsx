@@ -220,6 +220,10 @@ export default function UserDashboard() {
               <div className="flex items-center gap-3"><Package className="w-5 h-5" /> Мои заказы</div>
               <ChevronRight className="w-4 h-4" />
             </button>
+            <button onClick={() => setActiveTab("loyalty")} className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${activeTab === "loyalty" ? "bg-brand-gray text-zinc-900 border-l-4 border-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
+              <div className="flex items-center gap-3"><Star className="w-5 h-5" /> Бонусная система</div>
+              <ChevronRight className="w-4 h-4" />
+            </button>
             <button onClick={() => setActiveTab("favorites")} className={`w-full flex items-center justify-between p-4 font-bold transition-colors ${activeTab === "favorites" ? "bg-brand-gray text-zinc-900 border-l-4 border-zinc-900" : "text-zinc-500 hover:bg-zinc-50"}`}>
               <div className="flex items-center gap-3"><Heart className="w-5 h-5" /> Избранное</div>
               <ChevronRight className="w-4 h-4" />
@@ -246,6 +250,42 @@ export default function UserDashboard() {
 
         {/* Main Content Area */}
         <div className="md:col-span-3">
+          {activeTab === "loyalty" && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-br from-zinc-900 to-zinc-800 p-8 rounded-3xl text-white flex justify-between items-center shadow-lg">
+                <div>
+                  <p className="text-zinc-400 font-medium mb-1">Доступно баллов</p>
+                  <h2 className="text-5xl font-black">{user?.bonusPoints || 0}</h2>
+                  <p className="text-zinc-400 text-sm mt-4">Ваш рейтинг: <span className="font-bold text-white">{user?.rating || 'Новичок'}</span></p>
+                </div>
+                <div className="bg-white p-2 rounded-2xl">
+                  {/* Placeholder for QR code */}
+                  <div className="w-24 h-24 bg-zinc-200 flex items-center justify-center text-zinc-500 text-xs text-center rounded-xl">QR-код</div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-3xl shadow-sm border border-zinc-100">
+                <h3 className="font-bold text-xl mb-6">История баллов</h3>
+                <div className="space-y-4">
+                  {(user?.bonusHistory || []).map((h, i) => (
+                    <div key={i} className="flex justify-between items-center py-3 border-b border-zinc-100 last:border-0">
+                      <div>
+                        <p className="font-bold text-zinc-900">{h.description}</p>
+                        <p className="text-xs text-zinc-500">{new Date(h.date).toLocaleDateString()}</p>
+                      </div>
+                      <span className={`font-bold ${h.type === 'accrual' ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {h.type === 'accrual' ? '+' : '-'}{h.amount}
+                      </span>
+                    </div>
+                  ))}
+                  {(user?.bonusHistory?.length === 0 || !user?.bonusHistory) && (
+                    <p className="text-zinc-500 text-center py-4">Нет операций по бонусной системе</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {activeTab === "orders" && (
             <div className="space-y-4">
               {orders.length === 0 ? (
@@ -459,7 +499,13 @@ export default function UserDashboard() {
                   <input
                     type="tel"
                     value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      if (!value.startsWith('+7')) {
+                        value = '+7' + value.replace(/\+7/g, '').replace(/[^0-9]/g, '');
+                      }
+                      setFormData({...formData, phone: value});
+                    }}
                     placeholder="+7 (999) 000-00-00"
                     className="w-full px-4 py-2.5 bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-brand-orange focus:ring-1 focus:ring-brand-orange rounded-xl outline-none transition-all placeholder:text-zinc-400 font-medium text-zinc-900"
                   />

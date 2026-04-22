@@ -23,7 +23,7 @@ const logo = 'https://s3.twcstorage.ru/brusher-s3/banners/20b225f6-b8c0-4818-967
 
 function AppContent() {
   const { cartCount } = useCart();
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isMobileCartOrCheckout = location.pathname === '/cart' || location.pathname === '/checkout';
@@ -153,12 +153,26 @@ function AppContent() {
               </div>
               <span className="text-[11px] font-medium hidden sm:block">Корзина</span>
             </Link>
-            <button 
-              onClick={() => user ? navigate('/account') : setIsAuthModalOpen(true)}
-              className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-6 py-2.5 rounded-md font-bold text-sm transition-colors ml-2"
-            >
-              Войти
-            </button>
+            {user ? (
+              <div className="flex items-center gap-2">
+                <Link to="/account" className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
+                   <User className="w-5 h-5" />
+                </Link>
+                <button
+                  onClick={logout}
+                  className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-4 py-2 rounded-md font-bold text-sm transition-colors"
+                >
+                  Выйти
+                </button>
+              </div>
+            ) : (
+              <button 
+                onClick={() => setIsAuthModalOpen(true)}
+                className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-6 py-2.5 rounded-md font-bold text-sm transition-colors ml-2"
+              >
+                Войти
+              </button>
+            )}
           </nav>
         </div>
       </header>

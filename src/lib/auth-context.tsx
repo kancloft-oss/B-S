@@ -7,6 +7,15 @@ export interface User {
   fullName?: string;
   phone?: string;
   address?: string;
+  avatarUrl?: string;
+  rating?: number;
+  bonusPoints?: number;
+  bonusHistory?: {
+    date: string;
+    description: string;
+    amount: number;
+    type: 'accrual' | 'spending';
+  }[];
 }
 
 interface AuthContextType {
