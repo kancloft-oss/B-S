@@ -31,9 +31,9 @@ export const ordersRouter = express.Router();
       const id = o.id || Date.now().toString();
       const now = new Date().toISOString();
       await db.query(`
-        INSERT INTO orders (id, "userId", customer, phone, date, total, status, items, "createdAt")
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-      `, [id, o.userId || '', o.customer, o.phone, o.date || now, o.total, o.status, JSON.stringify(o.items || []), now]);
+        INSERT INTO orders (id, "userId", customer, phone, date, total, status, items, "createdAt", address)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [id, o.userId || '', o.customer, o.phone, o.date || now, o.total, o.status, JSON.stringify(o.items || []), now, o.address || '']);
       res.json({ id, ...o });
     } catch (e) { res.status(500).json({ error: (e as Error).message }); }
   });

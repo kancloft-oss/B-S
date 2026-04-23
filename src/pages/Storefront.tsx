@@ -779,6 +779,10 @@ export function Storefront({ view = "home" }: { view?: "home" | "catalog_list" |
                       <label className="text-xs font-medium text-zinc-700">Телефон <span className="text-brand-red">*</span></label>
                       <Input name="phone" defaultValue={user?.phone || ''} required placeholder="+7 (999) 000-00-00" className="rounded-md border-brand-border focus-visible:ring-brand-red h-12" />
                     </div>
+                    <div className="space-y-2">
+                      <label className="text-xs font-medium text-zinc-700">Адрес доставки <span className="text-brand-red">*</span></label>
+                      <Input name="address" defaultValue={user?.address || ''} required placeholder="ул. Ленина, д. 1, кв. 1" className="rounded-md border-brand-border focus-visible:ring-brand-red h-12" />
+                    </div>
                   </div>
                 </div>
                 

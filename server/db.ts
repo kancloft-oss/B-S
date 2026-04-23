@@ -93,6 +93,14 @@ export async function initializeDatabase() {
       await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS "fullName" TEXT;`);
       await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT;`);
       await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS address TEXT;`);
+      await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT;`);
+    } catch(err) {
+      console.log('Migration note:', err);
+    }
+
+    // Migrate existing orders table safely
+    try {
+      await db.query(`ALTER TABLE orders ADD COLUMN IF NOT EXISTS address TEXT;`);
     } catch(err) {
       console.log('Migration note:', err);
     }

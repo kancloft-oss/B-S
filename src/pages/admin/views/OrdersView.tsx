@@ -175,6 +175,10 @@ export default function OrdersView() {
                   <div className="font-medium">{selectedOrder.phone}</div>
                 </div>
                 <div>
+                  <div className="text-[11px] text-zinc-500 uppercase">Адрес</div>
+                  <div className="font-medium">{selectedOrder.address || 'Не указан'}</div>
+                </div>
+                <div>
                   <div className="text-[11px] text-zinc-500 uppercase">Дата</div>
                   <div className="font-medium">{new Date(selectedOrder.date).toLocaleString()}</div>
                 </div>

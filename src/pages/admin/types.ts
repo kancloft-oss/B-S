@@ -32,6 +32,7 @@ export interface Order {
   total: number;
   items: OrderItem[];
   userId?: string;
+  address?: string;
 }
 
 export interface Client {
@@ -48,6 +49,7 @@ export interface Client {
   rating: number;
   isBlocked?: boolean;
   avatar?: string;
+  address?: string;
 }
 
 export interface Banner {

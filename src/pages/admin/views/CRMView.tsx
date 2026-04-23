@@ -65,13 +65,22 @@ export default function CRMView() {
         }));
         setOrders(enhancedOrders);
 
+        // Fetch users
+        let usersData: any[] = [];
+        try {
+          const uRes = await fetch('/api/users');
+          if (uRes.ok) usersData = await uRes.json();
+        } catch (err) {}
+
         // Group orders by phone or customer name to identify unique clients
-        const clientMap = new Map<string, { name: string, phone: string, orders: Order[] }>();
+        const clientMap = new Map<string, { user?: any, name: string, phone: string, orders: Order[] }>();
         
         enhancedOrders.forEach(order => {
           const key = order.phone || order.customer;
+          const user = usersData.find(u => u.phone === order.phone || u.email === order.customer);
+          
           if (!clientMap.has(key)) {
-            clientMap.set(key, { name: order.customer, phone: order.phone, orders: [] });
+            clientMap.set(key, { user, name: order.customer, phone: order.phone, orders: [] });
           }
           clientMap.get(key)!.orders.push(order);
         });
@@ -96,10 +105,12 @@ export default function CRMView() {
           const rating = Math.min(5, Math.max(1, (orderCount * 0.5) + (totalSpent / 10000)));
 
           return {
-            id: String(index + 1),
-            name: data.name,
-            email: "",
-            phone: data.phone,
+            id: data.user?.id || String(index + 1),
+            name: data.user?.fullName || data.name,
+            email: data.user?.email || "",
+            phone: data.user?.phone || data.phone,
+            address: data.user?.address || "Не указан",
+            avatar: data.user?.avatarUrl || "",
             points: Math.floor(totalSpent * 0.05),
             status: daysSinceLast < 60 ? 'active' : 'inactive',
             totalSpent,
@@ -232,6 +243,7 @@ export default function CRMView() {
                   <div>
                     <div className="font-bold text-sm">{selectedClient.name}</div>
                     <div className="text-xs text-zinc-500">{selectedClient.phone}</div>
+                    <div className="text-xs text-zinc-400 mt-0.5">{selectedClient.address}</div>
                     <Badge variant={selectedClient.isBlocked ? "destructive" : "secondary"} className="mt-1">
                       {selectedClient.isBlocked ? "Заблокирован" : "Активен"}
                     </Badge>
@@ -349,8 +361,12 @@ export default function CRMView() {
               <TableRow key={client.id} className="hover:bg-zinc-50 cursor-pointer transition-colors" onClick={() => setSelectedClient(client)}>
                 <TableCell className="pl-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold">
-                      {client.name[0]}
+                    <div className="w-10 h-10 rounded-xl bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold overflow-hidden">
+                      {client.avatar ? (
+                         <img src={client.avatar} alt={client.name} className="w-full h-full object-cover" />
+                      ) : (
+                         client.name[0]
+                      )}
                     </div>
                     <div>
                       <div className="font-bold text-zinc-900">{client.name}</div>
