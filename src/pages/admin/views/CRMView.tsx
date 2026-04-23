@@ -189,7 +189,7 @@ export default function CRMView() {
                       <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Товары</div>
                       <div className="space-y-2">
                         {order.items.map((item, idx) => (
-                          <div key={`${item.productId}-${idx}`} className="flex justify-between items-center text-[11px]">
+                          <div key={`item-${order.id}-${item.productId}-${idx}`} className="flex justify-between items-center text-[11px]">
                             <div className="flex items-center gap-2">
                               <div className="relative group w-8 h-8 shrink-0">
                                 <img 

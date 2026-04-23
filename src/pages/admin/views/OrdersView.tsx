@@ -130,7 +130,7 @@ export default function OrdersView() {
                 </TableHeader>
                 <TableBody>
                   {selectedOrder.items.map((item, idx) => (
-                    <TableRow key={`${item.productId}-${idx}`}>
+                    <TableRow key={`order-item-${selectedOrder.id}-${item.productId}-${idx}`}>
                       <TableCell className="flex items-center gap-3">
                         <div className="relative group w-10 h-10 shrink-0">
                           <img 
