@@ -65,7 +65,7 @@ export function AdminDashboard() {
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-white font-bold text-lg tracking-tight">BRUSHES ADMIN</h1>
+            <h1 className="text-white font-bold text-sm tracking-tight">BRUSHES ADMIN</h1>
             <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">Control Center</p>
           </div>
         </div>
@@ -76,7 +76,7 @@ export function AdminDashboard() {
             <Link 
               key={item.path}
               to={item.path} 
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all group ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium transition-all group ${
                 currentPath === item.path 
                   ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20' 
                   : 'hover:bg-zinc-800/50 hover:text-white'
@@ -91,14 +91,14 @@ export function AdminDashboard() {
         <div className="p-6 border-t border-zinc-800/50 space-y-2">
           <Link 
             to="/" 
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white w-full transition-all group"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium text-zinc-400 hover:bg-zinc-800/50 hover:text-white w-full transition-all group"
           >
             <Home className="w-5 h-5" />
             <span>На сайт</span>
           </Link>
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-zinc-500 hover:bg-red-500/10 hover:text-red-500 w-full transition-all group"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-medium text-zinc-500 hover:bg-red-500/10 hover:text-red-500 w-full transition-all group"
           >
             <LogOut className="w-5 h-5 group-hover:scale-110 transition-transform" />
             <span>Выйти из системы</span>
@@ -112,7 +112,7 @@ export function AdminDashboard() {
         <header className="h-20 bg-white border-b border-zinc-200 sticky top-0 z-40 px-8 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <div className="h-10 w-[1px] bg-zinc-200 mx-2"></div>
-            <div className="text-sm font-medium text-zinc-500">
+            <div className="text-xs font-medium text-zinc-500">
               {navItems.find(i => i.path === currentPath)?.label || "Панель управления"}
             </div>
           </div>
@@ -120,14 +120,14 @@ export function AdminDashboard() {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3 px-4 py-2 bg-zinc-50 rounded-xl border border-zinc-100">
               <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span className="text-xs font-bold text-zinc-600 uppercase tracking-wider">System Online</span>
+              <span className="text-[11px] font-bold text-zinc-600 uppercase tracking-wider">System Online</span>
             </div>
             
             <div className="h-10 w-[1px] bg-zinc-200"></div>
 
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <div className="text-sm font-bold text-zinc-900">Администратор</div>
+                <div className="text-xs font-bold text-zinc-900">Администратор</div>
                 <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider">Super Admin</div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold shadow-lg shadow-orange-500/20">
@@ -155,7 +155,7 @@ export function AdminDashboard() {
                   <div className="w-20 h-20 bg-zinc-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
                     <Settings className="w-10 h-10 text-zinc-300" />
                   </div>
-                  <h3 className="text-2xl font-bold text-zinc-900 mb-2">Настройки магазина</h3>
+                  <h3 className="text-lg font-bold text-zinc-900 mb-2">Настройки магазина</h3>
                   <p className="text-zinc-500 max-w-sm mx-auto">Этот раздел находится в разработке. Здесь вы сможете настроить параметры оплаты, доставки и уведомлений.</p>
                 </div>
               } />

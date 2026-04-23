@@ -33,7 +33,7 @@ export default function MarketingView() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Маркетинг и Баннеры</h2>
+        <h2 className="text-lg font-bold">Маркетинг и Баннеры</h2>
         <Button className="bg-orange-500 gap-2"><Plus className="w-4 h-4" /> Добавить баннер</Button>
       </div>
 
@@ -44,8 +44,8 @@ export default function MarketingView() {
             <CardContent className="p-4">
               <div className="flex justify-between items-start mb-4">
                 <div>
-                  <h3 className="font-bold text-lg">{banner.title}</h3>
-                  <p className="text-sm text-zinc-500">Действие: {banner.action}</p>
+                  <h3 className="font-bold text-sm">{banner.title}</h3>
+                  <p className="text-xs text-zinc-500">Действие: {banner.action}</p>
                 </div>
                 <Badge variant={banner.active ? "default" : "secondary"}>{banner.active ? "Активен" : "Черновик"}</Badge>
               </div>
@@ -71,7 +71,7 @@ export default function MarketingView() {
                   <div className="bg-white p-2 rounded-lg shadow-sm"><Tag className="w-5 h-5 text-orange-500" /></div>
                   <div>
                     <div className="font-bold">{block}</div>
-                    <div className="text-xs text-zinc-500">12 товаров в блоке</div>
+                    <div className="text-[11px] text-zinc-500">12 товаров в блоке</div>
                   </div>
                 </div>
                 <Button variant="ghost" size="sm" className="text-orange-600">Настроить список</Button>

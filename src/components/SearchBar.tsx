@@ -61,7 +61,7 @@ export function SearchBar({ className }: { className?: string }) {
             placeholder="Оригинальные товары для творчества и художников"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-l-md border-2 border-zinc-600 border-r-0 bg-white focus-visible:ring-0 pl-4 pr-4 h-11 text-base shadow-none text-zinc-900 placeholder:text-zinc-500 transition-colors"
+            className="w-full rounded-l-md border-2 border-zinc-600 border-r-0 bg-white focus-visible:ring-0 pl-4 pr-4 h-11 text-[13px] shadow-none text-zinc-900 placeholder:text-zinc-500 transition-colors"
           />
           {isLoading && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 animate-spin text-zinc-400" />}
         </div>
@@ -81,7 +81,7 @@ export function SearchBar({ className }: { className?: string }) {
               <img src={product.image || undefined} alt={product.name} className="w-12 h-12 object-cover rounded-lg" />
               <div>
                 <div className="font-medium text-zinc-900">{product.name}</div>
-                <div className="text-xs text-zinc-500">{product.category}</div>
+                <div className="text-[11px] text-zinc-500">{product.category}</div>
               </div>
             </button>
           ))}

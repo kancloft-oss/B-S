@@ -13,7 +13,7 @@ const upload = multer({ storage: multer.memoryStorage() });
       }
       
       let folder = req.body.folder || 'general';
-      const validFolders = ['banners', 'products', 'categories', 'general'];
+      const validFolders = ['banners', 'products', 'categories', 'general', 'avatars', 'backgrounds'];
       if (!validFolders.includes(folder)) folder = 'general';
 
       const fileUrl = await uploadToS3(req.file, folder);

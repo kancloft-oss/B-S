@@ -10,7 +10,7 @@ import { AdminDashboard } from "./pages/AdminDashboard";
 import { AdminLogin } from "./pages/AdminLogin";
 import UserDashboard from "./pages/UserDashboard";
 import { AdminRoute } from "./components/AdminRoute";
-import { ShoppingCart, LayoutDashboard, Palette, Search, User, Menu, Settings, ShoppingBag, Heart, MapPin, Package, Home, ChevronDown, Briefcase, Phone, BarChart2, Percent } from "lucide-react";
+import { ShoppingCart, LayoutDashboard, Palette, Search, User, Menu, Settings, ShoppingBag, Heart, MapPin, Package, Home, ChevronDown, Briefcase, Phone, BarChart2, Percent, LogOut } from "lucide-react";
 import { CartProvider, useCart } from "./lib/cart-context";
 import { useAuth } from "./lib/auth-context";
 import { Input } from "./components/ui/input";
@@ -78,7 +78,7 @@ function AppContent() {
   return (
     <div className="min-h-screen bg-white flex flex-col font-sans pb-14 md:pb-0">
       {/* Desktop Header - Top Bar */}
-      <div className="hidden md:block bg-white text-zinc-600 text-[13px] py-1.5 border-b border-brand-border h-[44px]">
+      <div className="hidden md:block bg-white text-zinc-600 text-[11px] py-1.5 border-b border-brand-border h-[44px]">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-8">
           <div className="flex gap-5 items-center">
             <span className="hover:text-brand-red cursor-pointer transition-colors flex items-center gap-1 font-medium text-zinc-900">
@@ -122,7 +122,7 @@ function AppContent() {
             </div>
           </Link>
           
-          <Button className="bg-zinc-600 hover:bg-zinc-700 text-white gap-2 hidden md:flex shrink-0 rounded-md h-11 px-6 font-bold text-base transition-colors shadow-none" onClick={() => navigate('/catalog')}>
+          <Button className="bg-zinc-600 hover:bg-zinc-700 text-white gap-2 hidden md:flex shrink-0 rounded-md h-11 px-6 font-bold text-[13px] transition-colors shadow-none" onClick={() => navigate('/catalog')}>
             <Menu className="w-5 h-5" />
             Каталог
           </Button>
@@ -132,15 +132,15 @@ function AppContent() {
           <nav className="flex items-center gap-6 shrink-0 ml-auto">
             <Link to="/account?tab=favorites" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors relative hidden sm:flex">
               <Heart className="w-6 h-6" />
-              <span className="text-[11px] font-medium">Избранное</span>
+              <span className="text-[10px] font-medium">Избранное</span>
             </Link>
             <Link to="/compare" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors relative hidden sm:flex">
               <BarChart2 className="w-6 h-6" />
-              <span className="text-[11px] font-medium">Сравнение</span>
+              <span className="text-[10px] font-medium">Сравнение</span>
             </Link>
             <Link to="/account?tab=orders" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors hidden sm:flex">
               <Package className="w-6 h-6" />
-              <span className="text-[11px] font-medium">Заказы</span>
+              <span className="text-[10px] font-medium">Заказы</span>
             </Link>
             <Link to="/cart" className="flex flex-col items-center gap-1 text-zinc-600 hover:text-brand-red transition-colors relative">
               <div className="relative">
@@ -151,24 +151,29 @@ function AppContent() {
                   </span>
                 )}
               </div>
-              <span className="text-[11px] font-medium hidden sm:block">Корзина</span>
+              <span className="text-[10px] font-medium hidden sm:block">Корзина</span>
             </Link>
             {user ? (
               <div className="flex items-center gap-2">
-                <Link to="/account" className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors">
-                   <User className="w-5 h-5" />
+                <Link to="/account" className="flex items-center justify-center w-10 h-10 rounded-full bg-zinc-100 hover:bg-zinc-200 text-zinc-600 transition-colors overflow-hidden">
+                   {user.avatarUrl ? (
+                     <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                   ) : (
+                     <User className="w-5 h-5" />
+                   )}
                 </Link>
                 <button
                   onClick={logout}
-                  className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-4 py-2 rounded-md font-bold text-sm transition-colors"
+                  title="Выйти"
+                  className="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-zinc-100 text-zinc-500 hover:text-brand-red transition-colors"
                 >
-                  Выйти
+                  <LogOut className="w-5 h-5" />
                 </button>
               </div>
             ) : (
               <button 
                 onClick={() => setIsAuthModalOpen(true)}
-                className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-6 py-2.5 rounded-md font-bold text-sm transition-colors ml-2"
+                className="bg-zinc-100 hover:bg-zinc-200 text-zinc-900 px-6 py-2.5 rounded-md font-bold text-xs transition-colors ml-2"
               >
                 Войти
               </button>
@@ -179,7 +184,7 @@ function AppContent() {
 
       {/* Desktop Header - Sub-header (Categories) */}
       <div className="hidden md:block border-b border-brand-border bg-white">
-        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-12 text-[13px] font-medium">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-12 text-[11px] font-medium">
           <div className="flex items-center gap-6 overflow-x-auto no-scrollbar">
             <Link to="/promos" className="text-brand-red flex items-center gap-1 shrink-0"><Percent className="w-4 h-4" /> Акции</Link>
             {categories.filter(c => !c.parentId).slice(0, 8).map(c => (
@@ -188,7 +193,7 @@ function AppContent() {
               </Link>
             ))}
           </div>
-          <Button variant="outline" size="sm" className="h-8 px-3 bg-brand-gray border-none text-zinc-900 font-bold text-[12px] rounded-md flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-8 px-3 bg-brand-gray border-none text-zinc-900 font-bold text-[11px] rounded-md flex items-center gap-2">
             <Briefcase className="w-4 h-4" /> Для юрлиц
           </Button>
         </div>
@@ -210,12 +215,12 @@ function AppContent() {
                 className="h-10 w-auto object-contain"
               />
             </Link>
-            <div className="flex items-center gap-1 text-sm font-medium text-zinc-900 cursor-pointer">
+            <div className="flex items-center gap-1 text-xs font-medium text-zinc-900 cursor-pointer">
               Махачкала <ChevronDown className="w-4 h-4 text-zinc-500" />
             </div>
           </div>
           <div className="flex items-center gap-2 ml-auto">
-            <Button variant="outline" size="sm" className="h-8 px-2.5 bg-brand-gray border-none text-zinc-900 font-medium text-[11px] rounded-md">
+            <Button variant="outline" size="sm" className="h-8 px-2.5 bg-brand-gray border-none text-zinc-900 font-medium text-[10px] rounded-md">
               <Briefcase className="w-3.5 h-3.5 mr-1.5" /> Для юрлиц
             </Button>
             <Button variant="outline" size="icon" className="h-8 w-8 bg-brand-gray border-none text-zinc-900 rounded-md shrink-0">
@@ -230,7 +235,7 @@ function AppContent() {
             <input 
               type="text" 
               placeholder="Всё для творчества и хобби" 
-              className="w-full bg-brand-gray border-none rounded-md pl-10 pr-4 py-2.5 text-sm focus:ring-2 focus:ring-brand-red outline-none"
+              className="w-full bg-brand-gray border-none rounded-md pl-10 pr-4 py-2.5 text-xs focus:ring-2 focus:ring-brand-red outline-none"
             />
             <Search className="w-5 h-5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
           </div>
@@ -248,7 +253,7 @@ function AppContent() {
           <Route path="/account/*" element={
             loading ? (
               <div className="flex items-center justify-center p-20">
-                <div className="w-8 h-8 border-4 border-brand-orange border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-8 h-8 border-4 border-brand-red border-t-transparent rounded-full animate-spin"></div>
               </div>
             ) : user ? <UserDashboard /> : <Navigate to="/" replace />
           } />
@@ -298,8 +303,8 @@ function AppContent() {
       </nav>
 
       <footer className="hidden md:block bg-zinc-900 text-white py-12 mt-auto">
-        <div className="container mx-auto px-4 text-center text-sm text-zinc-400">
-          <div className="font-black text-2xl tracking-tighter text-white mb-4">АртИнструмент</div>
+        <div className="container mx-auto px-4 text-center text-xs text-zinc-400">
+          <div className="font-black text-lg tracking-tighter text-white mb-4">АртИнструмент</div>
           &copy; {new Date().getFullYear()} АртИнструмент. Все права защищены.
         </div>
       </footer>

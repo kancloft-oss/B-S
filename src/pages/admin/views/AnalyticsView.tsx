@@ -59,7 +59,7 @@ export default function AnalyticsView() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Аналитика сайта</h2>
+        <h2 className="text-lg font-bold">Аналитика сайта</h2>
         <div className="flex gap-2">
           {['week', 'month', 'year', 'custom'].map(p => (
             <Button 
@@ -78,44 +78,44 @@ export default function AnalyticsView() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">Сумма продаж</CardTitle>
+            <CardTitle className="text-xs font-medium text-zinc-500">Сумма продаж</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.revenue.toLocaleString()} ₽</div>
-            <div className="flex items-center text-xs text-emerald-500 mt-1">
+            <div className="text-lg font-bold">{stats.revenue.toLocaleString()} ₽</div>
+            <div className="flex items-center text-[11px] text-emerald-500 mt-1">
               <ArrowUpRight className="w-3 h-3 mr-1" /> {stats.salesGrowth}% к прошлому периоду
             </div>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">Средний чек</CardTitle>
+            <CardTitle className="text-xs font-medium text-zinc-500">Средний чек</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.avgCheck.toLocaleString()} ₽</div>
-            <div className="flex items-center text-xs text-emerald-500 mt-1">
+            <div className="text-lg font-bold">{stats.avgCheck.toLocaleString()} ₽</div>
+            <div className="flex items-center text-[11px] text-emerald-500 mt-1">
               <ArrowUpRight className="w-3 h-3 mr-1" /> {stats.checkGrowth}% к прошлому периоду
             </div>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">Количество чеков</CardTitle>
+            <CardTitle className="text-xs font-medium text-zinc-500">Количество чеков</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.orderCount}</div>
-            <div className="flex items-center text-xs text-emerald-500 mt-1">
+            <div className="text-lg font-bold">{stats.orderCount}</div>
+            <div className="flex items-center text-[11px] text-emerald-500 mt-1">
               <ArrowUpRight className="w-3 h-3 mr-1" /> {stats.orderGrowth}% к прошлому периоду
             </div>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">Конверсия</CardTitle>
+            <CardTitle className="text-xs font-medium text-zinc-500">Конверсия</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3.4%</div>
-            <div className="flex items-center text-xs text-red-500 mt-1">
+            <div className="text-lg font-bold">3.4%</div>
+            <div className="flex items-center text-[11px] text-red-500 mt-1">
               <ArrowDownRight className="w-3 h-3 mr-1" /> 0.5% к прошлому периоду
             </div>
           </CardContent>
@@ -174,7 +174,7 @@ export default function AnalyticsView() {
             </div>
             <div className="mt-4 space-y-2">
               {stats.categoryData.map((entry: any, index: number) => (
-                <div key={entry.name} className="flex items-center justify-between text-sm">
+                <div key={entry.name} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                     <span className="text-zinc-600">{entry.name}</span>

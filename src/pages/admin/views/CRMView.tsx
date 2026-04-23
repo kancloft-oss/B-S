@@ -115,7 +115,7 @@ export default function CRMView() {
           <Button variant="outline" size="icon" onClick={() => setSelectedClient(null)}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <h2 className="text-2xl font-bold">{selectedClient.name}</h2>
+          <h2 className="text-lg font-bold">{selectedClient.name}</h2>
           <Badge className="bg-orange-500">{selectedClient.segment.toUpperCase()}</Badge>
         </div>
 
@@ -135,8 +135,8 @@ export default function CRMView() {
                           <Package className="w-4 h-4 text-orange-500" />
                         </div>
                         <div>
-                          <div className="font-bold text-sm">Заказ #{order.id}</div>
-                          <div className="text-xs text-zinc-500">{new Date(order.date).toLocaleString()}</div>
+                          <div className="font-bold text-xs">Заказ #{order.id}</div>
+                          <div className="text-[11px] text-zinc-500">{new Date(order.date).toLocaleString()}</div>
                         </div>
                       </div>
                       <div className="text-right">
@@ -148,7 +148,7 @@ export default function CRMView() {
                       <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Товары</div>
                       <div className="space-y-1">
                         {order.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between text-xs">
+                          <div key={idx} className="flex justify-between text-[11px]">
                             <span className="text-zinc-600">{item.productId} x {item.qty}</span>
                             <span className="font-medium">{item.price * item.qty} ₽</span>
                           </div>
@@ -168,31 +168,31 @@ export default function CRMView() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 text-2xl font-bold">
+                  <div className="w-16 h-16 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 text-lg font-bold">
                     {selectedClient.name[0]}
                   </div>
                   <div>
-                    <div className="font-bold text-lg">{selectedClient.name}</div>
-                    <div className="text-sm text-zinc-500">{selectedClient.phone}</div>
+                    <div className="font-bold text-sm">{selectedClient.name}</div>
+                    <div className="text-xs text-zinc-500">{selectedClient.phone}</div>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
                     <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Всего потрачено</div>
-                    <div className="text-lg font-bold">{selectedClient.totalSpent.toLocaleString()} ₽</div>
+                    <div className="text-sm font-bold">{selectedClient.totalSpent.toLocaleString()} ₽</div>
                   </div>
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
                     <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Заказов</div>
-                    <div className="text-lg font-bold">{selectedClient.orderCount}</div>
+                    <div className="text-sm font-bold">{selectedClient.orderCount}</div>
                   </div>
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
                     <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Баллы LTV</div>
-                    <div className="text-lg font-bold text-orange-600">{selectedClient.points}</div>
+                    <div className="text-sm font-bold text-orange-600">{selectedClient.points}</div>
                   </div>
                   <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-100">
                     <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Рейтинг</div>
-                    <div className="text-lg font-bold flex items-center gap-1">
+                    <div className="text-sm font-bold flex items-center gap-1">
                       <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                       {selectedClient.rating}
                     </div>
@@ -200,7 +200,7 @@ export default function CRMView() {
                 </div>
 
                 <div className="pt-4 border-t border-zinc-100">
-                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-3">Коммуникация</div>
+                  <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Коммуникация</div>
                   <div className="space-y-2">
                     <Button variant="outline" className="w-full justify-start gap-3 rounded-xl h-11">
                       <Mail className="w-4 h-4 text-zinc-400" /> Написать Email
@@ -229,7 +229,7 @@ export default function CRMView() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Клиенты (CRM)</h2>
+        <h2 className="text-lg font-bold">Клиенты (CRM)</h2>
         <div className="flex gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -255,7 +255,7 @@ export default function CRMView() {
           <Card key={seg.label} className={`border-none ${seg.color} shadow-sm`}>
             <CardContent className="p-4 flex flex-col items-center text-center">
               <div className="p-2 bg-white rounded-lg shadow-sm mb-2">{seg.icon}</div>
-              <div className="text-xl font-bold">{seg.count}</div>
+              <div className="text-base font-bold">{seg.count}</div>
               <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">{seg.label}</div>
             </CardContent>
           </Card>
@@ -285,14 +285,14 @@ export default function CRMView() {
                     </div>
                     <div>
                       <div className="font-bold text-zinc-900">{client.name}</div>
-                      <div className="text-xs text-zinc-500">{client.phone}</div>
+                      <div className="text-[11px] text-zinc-500">{client.phone}</div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {getSegmentIcon(client.segment)}
-                    <span className="text-xs font-bold uppercase tracking-wider text-zinc-600">{client.segment}</span>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-600">{client.segment}</span>
                   </div>
                 </TableCell>
                 <TableCell className="font-medium">{client.orderCount}</TableCell>
@@ -300,7 +300,7 @@ export default function CRMView() {
                 <TableCell>
                   <Badge variant="outline" className="text-orange-600 border-orange-200 bg-orange-50/50">{client.points} Б</Badge>
                 </TableCell>
-                <TableCell className="text-zinc-500 text-sm">{client.lastPurchaseDate}</TableCell>
+                <TableCell className="text-zinc-500 text-xs">{client.lastPurchaseDate}</TableCell>
                 <TableCell className="text-right pr-6">
                   <div className="flex items-center justify-end gap-1 font-bold text-zinc-900">
                     <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" /> {client.rating}

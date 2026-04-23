@@ -34,7 +34,7 @@ export default function CategoriesView() {
           return <span className="text-emerald-600 font-semibold text-[10px] uppercase tracking-wider bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Корневая группа</span>;
       }
       const parent = categories.find(c => c.id === pId);
-      return parent ? <span className="text-zinc-600 text-[13px]">↳ Входит в: <strong>{parent.name}</strong></span> : <span className="text-red-500 text-[13px]">Неизвестная родительская группа</span>;
+      return parent ? <span className="text-zinc-600 text-[11px]">↳ Входит в: <strong>{parent.name}</strong></span> : <span className="text-red-500 text-[11px]">Неизвестная родительская группа</span>;
   };
 
   const uploadCategoryImage = async (id: string, file: File) => {
@@ -75,9 +75,9 @@ export default function CategoriesView() {
         <table className="w-full text-left border-collapse">
             <thead>
                 <tr className="bg-[#e0e0e0] border-b border-zinc-400">
-                    <th className="py-2 px-3 font-semibold text-[13px] text-zinc-800 w-1/2">Наименование</th>
-                    <th className="py-2 px-3 font-semibold text-[13px] text-zinc-800">Расположение</th>
-                    <th className="py-2 px-3 font-semibold text-[13px] text-zinc-800 text-right">Фото</th>
+                    <th className="py-2 px-3 font-semibold text-[11px] text-zinc-800 w-1/2">Наименование</th>
+                    <th className="py-2 px-3 font-semibold text-[11px] text-zinc-800">Расположение</th>
+                    <th className="py-2 px-3 font-semibold text-[11px] text-zinc-800 text-right">Фото</th>
                 </tr>
             </thead>
             <tbody>
@@ -93,7 +93,7 @@ export default function CategoriesView() {
                         >
                             <td className="py-2 px-3 border-r border-zinc-200">
                                 <div className="flex items-center gap-2">
-                                    <span className={`text-[14px] ${isRoot ? 'font-bold text-zinc-950' : 'text-zinc-700'}`}>
+                                    <span className={`text-xs ${isRoot ? 'font-bold text-zinc-950' : 'text-zinc-700'}`}>
                                       {node.name}
                                     </span>
                                 </div>
@@ -111,7 +111,7 @@ export default function CategoriesView() {
                                       id={`file-${node.id}`}
                                       onChange={(e) => e.target.files && uploadCategoryImage(node.id, e.target.files[0])}
                                   />
-                                  <label htmlFor={`file-${node.id}`} className="text-xs font-medium bg-white border border-zinc-300 hover:bg-zinc-100 px-3 py-1.5 rounded cursor-pointer transition-colors shadow-sm text-zinc-700">
+                                  <label htmlFor={`file-${node.id}`} className="text-[11px] font-medium bg-white border border-zinc-300 hover:bg-zinc-100 px-3 py-1.5 rounded cursor-pointer transition-colors shadow-sm text-zinc-700">
                                       {node.image ? 'Изменить' : 'Загрузить'}
                                   </label>
                                 </div>
@@ -121,7 +121,7 @@ export default function CategoriesView() {
                 })}
                 {categories.length === 0 && (
                     <tr>
-                        <td colSpan={3} className="py-8 text-center text-zinc-500 text-sm">
+                        <td colSpan={3} className="py-8 text-center text-zinc-500 text-xs">
                             Категории не найдены.
                         </td>
                     </tr>

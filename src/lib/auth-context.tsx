@@ -8,7 +8,10 @@ export interface User {
   phone?: string;
   address?: string;
   avatarUrl?: string;
-  rating?: number;
+  backgroundUrl?: string;
+  theme?: string;
+  rating?: string;
+  cardType?: string; // New field
   bonusPoints?: number;
   bonusHistory?: {
     date: string;

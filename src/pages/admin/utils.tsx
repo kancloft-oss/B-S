@@ -16,7 +16,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 export const getStatusBadge = (status: string) => {
-  const base = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold uppercase tracking-wide";
+  const base = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold uppercase tracking-wide";
   switch (status) {
     case 'new': return <div className={`${base} bg-blue-100 text-blue-700`}><Clock className="w-3.5 h-3.5"/> Новый</div>;
     case 'confirming': return <div className={`${base} bg-orange-100 text-orange-700`}><AlertCircle className="w-3.5 h-3.5"/> Проверка</div>;

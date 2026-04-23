@@ -28,13 +28,13 @@ export function AdminLogin() {
           <div className="mx-auto bg-orange-500 w-16 h-16 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-orange-500/20 rotate-3">
             <Lock className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-black tracking-tight text-zinc-900">BRUSHES ADMIN</CardTitle>
-          <p className="text-zinc-500 text-sm font-medium">Авторизация в системе управления</p>
+          <CardTitle className="text-[22px] font-black tracking-tight text-zinc-900">BRUSHES ADMIN</CardTitle>
+          <p className="text-zinc-500 text-xs font-medium">Авторизация в системе управления</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Логин доступа</label>
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Логин доступа</label>
               <Input 
                 type="text" 
                 value={username} 
@@ -44,7 +44,7 @@ export function AdminLogin() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Пароль</label>
+              <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest ml-1">Пароль</label>
               <Input 
                 type="password" 
                 value={password} 
@@ -54,7 +54,7 @@ export function AdminLogin() {
               />
             </div>
             {error && (
-              <div className="bg-red-50 text-red-500 text-xs font-bold p-3 rounded-lg border border-red-100 flex items-center gap-2">
+              <div className="bg-red-50 text-red-500 text-[11px] font-bold p-3 rounded-lg border border-red-100 flex items-center gap-2">
                 <ShieldAlert className="w-4 h-4" />
                 {error}
               </div>

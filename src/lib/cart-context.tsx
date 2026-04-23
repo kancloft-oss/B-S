@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 export interface Product {
   id: string;
@@ -32,8 +32,22 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem("cart");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [favorites, setFavorites] = useState<string[]>(() => {
+    const saved = localStorage.getItem("favorites");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("cart", JSON.stringify(cart));
+  }, [cart]);
+
+  useEffect(() => {
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+  }, [favorites]);
 
   const toggleFavorite = (id: string) => {
     setFavorites(prev => 
@@ -54,13 +68,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const updateQuantity = (id: string, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQty = Math.max(1, Math.min(item.quantity + delta, item.stock));
-        return { ...item, quantity: newQty };
+    setCart(prev => {
+      const item = prev.find(i => i.id === id);
+      if (!item) return prev;
+      
+      const newQty = item.quantity + delta;
+      
+      if (newQty <= 0) {
+        return prev.filter(i => i.id !== id);
       }
-      return item;
-    }));
+      
+      return prev.map(i => 
+        i.id === id ? { ...i, quantity: Math.min(newQty, i.stock) } : i
+      );
+    });
   };
 
   const removeFromCart = (id: string) => {

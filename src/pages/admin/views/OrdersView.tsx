@@ -80,7 +80,7 @@ export default function OrdersView() {
           <Button variant="outline" size="icon" onClick={() => setSelectedOrder(null)}>
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <h2 className="text-2xl font-bold">Заказ #{selectedOrder.id}</h2>
+          <h2 className="text-lg font-bold">Заказ #{selectedOrder.id}</h2>
           {getStatusBadge(selectedOrder.status)}
         </div>
 
@@ -110,7 +110,7 @@ export default function OrdersView() {
                   ))}
                   <TableRow>
                     <TableCell colSpan={3} className="text-right font-bold">Итого:</TableCell>
-                    <TableCell className="text-right font-black text-lg">{selectedOrder.total} ₽</TableCell>
+                    <TableCell className="text-right font-black text-sm">{selectedOrder.total} ₽</TableCell>
                   </TableRow>
                 </TableBody>
               </Table>
@@ -124,15 +124,15 @@ export default function OrdersView() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <div className="text-xs text-zinc-500 uppercase">Имя</div>
+                  <div className="text-[11px] text-zinc-500 uppercase">Имя</div>
                   <div className="font-medium">{selectedOrder.customer}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-zinc-500 uppercase">Телефон</div>
+                  <div className="text-[11px] text-zinc-500 uppercase">Телефон</div>
                   <div className="font-medium">{selectedOrder.phone}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-zinc-500 uppercase">Дата</div>
+                  <div className="text-[11px] text-zinc-500 uppercase">Дата</div>
                   <div className="font-medium">{new Date(selectedOrder.date).toLocaleString()}</div>
                 </div>
               </CardContent>
@@ -158,10 +158,10 @@ export default function OrdersView() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Заказы</h2>
+        <h2 className="text-lg font-bold">Заказы</h2>
         <div className="flex gap-2">
           <select 
-            className="bg-white border border-zinc-200 rounded-lg px-3 py-1.5 text-sm outline-none"
+            className="bg-white border border-zinc-200 rounded-lg px-3 py-1.5 text-xs outline-none"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           >

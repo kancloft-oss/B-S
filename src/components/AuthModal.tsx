@@ -88,15 +88,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         </button>
 
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-zinc-900 mb-2">Вход на сайт</h2>
-          <p className="text-zinc-500 mb-6 text-sm">
+          <h2 className="text-lg font-bold text-zinc-900 mb-2">Вход на сайт</h2>
+          <p className="text-zinc-500 mb-6 text-xs">
             {step === 'email' 
               ? 'Введите ваш email, и мы отправим вам код для входа' 
               : `Код отправлен на ${email}`}
           </p>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-md text-sm border border-red-100">
+            <div className="mb-4 p-3 bg-red-50 text-red-600 rounded-md text-xs border border-red-100">
               {error}
             </div>
           )}
@@ -104,7 +104,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {step === 'email' ? (
             <form onSubmit={handleSendCode} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Email</label>
+                <label className="block text-xs font-medium text-zinc-700 mb-1">Email</label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                   <input
@@ -128,7 +128,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           ) : (
             <form onSubmit={handleVerifyCode} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1">Код из письма</label>
+                <label className="block text-xs font-medium text-zinc-700 mb-1">Код из письма</label>
                 <div className="relative">
                   <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
                   <input
@@ -138,7 +138,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                     placeholder="123456"
                     required
                     maxLength={6}
-                    className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-brand-red outline-none transition-all text-center tracking-widest font-mono text-lg"
+                    className="w-full pl-10 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-brand-red focus:border-brand-red outline-none transition-all text-center tracking-widest font-mono text-sm"
                   />
                 </div>
               </div>
@@ -153,7 +153,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={() => setStep('email')}
-                className="w-full text-zinc-500 hover:text-zinc-900 text-sm mt-2 font-medium"
+                className="w-full text-zinc-500 hover:text-zinc-900 text-xs mt-2 font-medium"
               >
                 Изменить email
               </button>

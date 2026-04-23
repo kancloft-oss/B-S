@@ -264,7 +264,7 @@ export default function Import1CView() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Синхронизация с 1С</h2>
+        <h2 className="text-lg font-bold">Синхронизация с 1С</h2>
         <div className="flex gap-2">
           <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-200">
             S3 XML
@@ -280,7 +280,7 @@ export default function Import1CView() {
           <Card className="border-none shadow-sm overflow-hidden relative">
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-400 to-rose-500"></div>
             <CardHeader className="pt-8">
-              <CardTitle className="flex items-center gap-2 text-xl">
+              <CardTitle className="flex items-center gap-2 text-base">
                 <Database className="w-6 h-6 text-orange-500" />
                 Автоматическая синхронизация из S3 (XML)
               </CardTitle>
@@ -294,10 +294,10 @@ export default function Import1CView() {
               <div className="space-y-4">
                 <div className="flex justify-between items-end">
                   <div className="space-y-1">
-                     <p className="text-sm font-bold text-zinc-900">Прогресс S3 синхронизации</p>
-                     <p className="text-xs text-zinc-500">Логи транслируются в журнал событий в реальном времени</p>
+                     <p className="text-xs font-bold text-zinc-900">Прогресс S3 синхронизации</p>
+                     <p className="text-[11px] text-zinc-500">Логи транслируются в журнал событий в реальном времени</p>
                   </div>
-                  <span className="text-3xl font-black text-orange-500">{progress}%</span>
+                  <span className="text-[22px] font-black text-orange-500">{progress}%</span>
                 </div>
                 <div className="w-full bg-zinc-100 h-4 rounded-full overflow-hidden shadow-inner">
                   <div 
@@ -312,7 +312,7 @@ export default function Import1CView() {
               <Button 
                 onClick={handleImportS3} 
                 disabled={loading} 
-                className="w-full h-16 text-lg bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
+                className="w-full h-16 text-sm bg-orange-600 hover:bg-orange-500 text-white font-bold rounded-2xl shadow-xl shadow-orange-500/20 transition-all active:scale-[0.98] disabled:opacity-50"
               >
                 {loading ? (
                   <div className="flex items-center gap-3">
@@ -344,7 +344,7 @@ export default function Import1CView() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="border border-zinc-200 rounded-xl p-4 text-center space-y-3 hover:border-zinc-300 transition-all bg-zinc-50/50">
-                    <p className="font-medium text-sm text-zinc-900">1. Каталог (Обязательно)</p>
+                    <p className="font-medium text-xs text-zinc-900">1. Каталог (Обязательно)</p>
                     <Input 
                       type="file" 
                       accept=".xml" 
@@ -353,19 +353,19 @@ export default function Import1CView() {
                       id="xml-import-upload"
                     />
                     <label htmlFor="xml-import-upload" className="cursor-pointer block">
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-9 px-4 shadow-sm w-full">
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-9 px-4 shadow-sm w-full">
                         Выберите import.xml
                       </div>
                     </label>
                     {xmlImportFile && (
-                      <div className="flex items-center justify-center gap-1 text-xs font-bold text-emerald-600 truncate px-2">
+                      <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 truncate px-2">
                         <CheckCircle2 className="w-3 h-3 shrink-0" /> <span className="truncate">{xmlImportFile.name}</span>
                       </div>
                     )}
                   </div>
 
                   <div className="border border-zinc-200 rounded-xl p-4 text-center space-y-3 hover:border-zinc-300 transition-all bg-zinc-50/50">
-                    <p className="font-medium text-sm text-zinc-900">2. Цены / Остатки</p>
+                    <p className="font-medium text-xs text-zinc-900">2. Цены / Остатки</p>
                     <Input 
                       type="file" 
                       accept=".xml" 
@@ -374,12 +374,12 @@ export default function Import1CView() {
                       id="xml-offers-upload"
                     />
                     <label htmlFor="xml-offers-upload" className="cursor-pointer block">
-                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-9 px-4 shadow-sm w-full">
+                      <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-9 px-4 shadow-sm w-full">
                         Выберите offers.xml
                       </div>
                     </label>
                     {xmlOffersFile && (
-                      <div className="flex items-center justify-center gap-1 text-xs font-bold text-emerald-600 truncate px-2">
+                      <div className="flex items-center justify-center gap-1 text-[11px] font-bold text-emerald-600 truncate px-2">
                         <CheckCircle2 className="w-3 h-3 shrink-0" /> <span className="truncate">{xmlOffersFile.name}</span>
                       </div>
                     )}
@@ -416,12 +416,12 @@ export default function Import1CView() {
                   id="file-upload"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer">
-                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-10 px-6 rounded-lg shadow-sm">
+                  <div className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-xs font-medium transition-colors border border-zinc-200 bg-white hover:bg-zinc-100 hover:text-zinc-900 h-10 px-6 rounded-lg shadow-sm">
                     Выбрать Excel файл
                   </div>
                 </label>
                 {file && (
-                  <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-600">
+                  <div className="flex items-center justify-center gap-2 text-xs font-bold text-emerald-600">
                     <CheckCircle2 className="w-4 h-4" /> {file.name}
                   </div>
                 )}
@@ -440,13 +440,13 @@ export default function Import1CView() {
 
           <Card className="border-none shadow-sm">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <CardTitle className="text-xs font-bold flex items-center gap-2">
                 <ListTodo className="w-4 h-4 text-zinc-400" />
                 Журнал событий
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="bg-zinc-900 rounded-2xl p-6 font-mono text-[11px] text-zinc-400 h-96 overflow-y-auto space-y-2 custom-scrollbar">
+              <div className="bg-zinc-900 rounded-2xl p-6 font-mono text-[10px] text-zinc-400 h-96 overflow-y-auto space-y-2 custom-scrollbar">
                 {logs.length === 0 && (
                   <div className="h-full flex flex-col items-center justify-center text-zinc-600 space-y-2">
                     <Terminal className="w-8 h-8 opacity-20" />
@@ -469,9 +469,9 @@ export default function Import1CView() {
         <div className="space-y-6">
           <Card className="border-none shadow-sm bg-zinc-900 text-white">
             <CardHeader>
-              <CardTitle className="text-lg flex gap-2 items-center"><Database className="w-5 h-5 text-orange-500"/> Инструкция S3</CardTitle>
+              <CardTitle className="text-sm flex gap-2 items-center"><Database className="w-5 h-5 text-orange-500"/> Инструкция S3</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-zinc-400">
+            <CardContent className="space-y-4 text-xs text-zinc-400">
               <div className="flex gap-3">
                 <div className="w-6 h-6 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 font-bold text-zinc-300">1</div>
                 <p>Выгрузите из 1С файлы <code className="text-orange-400">import.xml</code> и <code className="text-orange-400">offers.xml</code>, а также папку с картинками.</p>
@@ -489,23 +489,23 @@ export default function Import1CView() {
 
           <Card className="border-none shadow-sm">
             <CardHeader>
-              <CardTitle className="text-sm font-bold">Статистика базы</CardTitle>
+              <CardTitle className="text-xs font-bold">Статистика базы</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
-                <span className="text-xs text-zinc-500 font-medium">Всего товаров</span>
+                <span className="text-[11px] text-zinc-500 font-medium">Всего товаров</span>
                 <span className="font-bold text-zinc-900">{stats.totalProducts.toLocaleString()}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
-                <span className="text-xs text-zinc-500 font-medium">Групп товаров</span>
+                <span className="text-[11px] text-zinc-500 font-medium">Групп товаров</span>
                 <span className="font-bold text-zinc-900">{stats.totalCategories}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
-                <span className="text-xs text-zinc-500 font-medium">Новинок (7дн)</span>
+                <span className="text-[11px] text-zinc-500 font-medium">Новинок (7дн)</span>
                 <span className="font-bold text-emerald-600">+{stats.newProducts}</span>
               </div>
               <div className="flex justify-between items-center p-3 bg-zinc-50 rounded-xl">
-                <span className="text-xs text-zinc-500 font-medium">Последнее обновление</span>
+                <span className="text-[11px] text-zinc-500 font-medium">Последнее обновление</span>
                 <span className="font-bold text-zinc-900 text-[10px]">{stats.lastUpdate}</span>
               </div>
             </CardContent>

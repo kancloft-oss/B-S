@@ -126,7 +126,7 @@ authRouter.get('/me', async (req, res) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET) as any;
 
-        const userResult = await db.query('SELECT id, email, role, "fullName", phone, address FROM users WHERE id = $1', [decoded.id]);
+        const userResult = await db.query('SELECT id, email, role, "fullName", phone, address, "avatarUrl", "backgroundUrl", theme, "bonusPoints", "bonusHistory", rating FROM users WHERE id = $1', [decoded.id]);
         if (userResult.rows.length === 0) {
             return res.status(404).json({ error: 'Пользователь не найден' });
         }
@@ -147,15 +147,15 @@ authRouter.put('/me', async (req, res) => {
         const token = authHeader.split(' ')[1];
         const decoded = jwt.verify(token, JWT_SECRET) as any;
 
-        const { fullName, phone, address } = req.body;
+        const { fullName, phone, address, avatarUrl, backgroundUrl, theme } = req.body;
 
         await db.query(`
             UPDATE users 
-            SET "fullName" = $1, phone = $2, address = $3
-            WHERE id = $4
-        `, [fullName, phone, address, decoded.id]);
+            SET "fullName" = $1, phone = $2, address = $3, "avatarUrl" = $4, "backgroundUrl" = $5, theme = $6
+            WHERE id = $7
+        `, [fullName, phone, address, avatarUrl, backgroundUrl, theme, decoded.id]);
 
-        const userResult = await db.query('SELECT id, email, role, "fullName", phone, address FROM users WHERE id = $1', [decoded.id]);
+        const userResult = await db.query('SELECT id, email, role, "fullName", phone, address, "avatarUrl", "backgroundUrl", theme, "bonusPoints", "bonusHistory", rating FROM users WHERE id = $1', [decoded.id]);
         
         res.json({ user: userResult.rows[0], success: true });
     } catch (error) {

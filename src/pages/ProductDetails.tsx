@@ -90,7 +90,7 @@ export function ProductDetails() {
   if (!product) {
     return (
       <div className="text-center py-16">
-        <h2 className="text-2xl font-bold mb-4">Товар не найден</h2>
+        <h2 className="text-lg font-bold mb-4">Товар не найден</h2>
         <Button onClick={() => navigate("/")} className="bg-zinc-900 hover:bg-zinc-800 text-white font-bold">
           Вернуться в каталог
         </Button>
@@ -127,7 +127,7 @@ export function ProductDetails() {
   return (
     <div className="pb-20 md:pb-16 max-w-[1400px] mx-auto px-4 lg:px-8">
       {/* Breadcrumbs */}
-      <div className="hidden md:flex items-center gap-1.5 text-[13px] text-zinc-500 mb-4 mt-6 flex-wrap">
+      <div className="hidden md:flex items-center gap-1.5 text-[11px] text-zinc-500 mb-4 mt-6 flex-wrap">
         {breadcrumbs.map((crumb, idx) => (
           <React.Fragment key={idx}>
             <Link to={crumb.link} className="hover:text-brand-red transition-colors">{crumb.name}</Link>
@@ -139,11 +139,11 @@ export function ProductDetails() {
 
       {/* Main Product Header */}
       <div className="mb-6">
-        <h1 className="text-2xl md:text-3xl lg:text-[32px] font-bold text-zinc-900 leading-tight mb-4">
+        <h1 className="text-lg md:text-[22px] lg:text-[22px] font-bold text-zinc-900 leading-tight mb-4">
           {product.name}
         </h1>
         
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm border-b border-zinc-100 pb-4">
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-xs border-b border-zinc-100 pb-4">
           <span className="text-zinc-500">
             Код товара: {product.sku || product.id.padStart(8, '0')}
           </span>
@@ -164,7 +164,7 @@ export function ProductDetails() {
         <button onClick={() => navigate(-1)} className="p-2 -ml-2 text-zinc-500 hover:text-brand-red">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <span className="font-medium text-sm truncate">{product.name}</span>
+        <span className="font-medium text-xs truncate">{product.name}</span>
       </div>
 
       <div className="mb-12">
@@ -203,13 +203,13 @@ export function ProductDetails() {
             
             {product.description && (
               <div className="mb-6">
-                <h3 className="text-zinc-500 mb-2 text-[15px]">О товаре</h3>
-                <p className="text-[15px] leading-relaxed text-zinc-900 line-clamp-6">
+                <h3 className="text-zinc-500 mb-2 text-xs">О товаре</h3>
+                <p className="text-xs leading-relaxed text-zinc-900 line-clamp-6">
                   {product.description}
                 </p>
                 <button 
                   onClick={() => setActiveTab("description")}
-                  className="flex items-center gap-1 text-[15px] text-zinc-900 hover:text-brand-red mt-2 transition-colors group"
+                  className="flex items-center gap-1 text-xs text-zinc-900 hover:text-brand-red mt-2 transition-colors group"
                 >
                   Читать полное описание
                   <ChevronRight className="w-4 h-4 text-zinc-400 group-hover:text-brand-red" />
@@ -224,8 +224,8 @@ export function ProductDetails() {
                   %
                 </div>
                 <div>
-                  <div className="text-[15px] text-zinc-900">Сопутствующие товары</div>
-                  <div className="text-[13px] text-zinc-500">Подборка для этого товара</div>
+                  <div className="text-xs text-zinc-900">Сопутствующие товары</div>
+                  <div className="text-[11px] text-zinc-500">Подборка для этого товара</div>
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-zinc-400" />
@@ -243,11 +243,11 @@ export function ProductDetails() {
                   className="flex items-center gap-2 text-zinc-900 hover:text-brand-red transition-colors group"
                 >
                   <Heart className={`w-5 h-5 ${isFavorite ? "fill-brand-red text-brand-red stroke-brand-red" : "text-zinc-900 group-hover:stroke-brand-red"}`} strokeWidth={1.5} />
-                  <span className="text-[14px] font-medium">В избранное</span>
+                  <span className="text-xs font-medium">В избранное</span>
                 </button>
                 <button className="flex items-center gap-2 text-zinc-900 hover:text-brand-red transition-colors group">
                   <BarChart2 className="w-5 h-5 text-zinc-900 group-hover:stroke-brand-red" strokeWidth={2} />
-                  <span className="text-[14px] font-medium">Сравнить</span>
+                  <span className="text-xs font-medium">Сравнить</span>
                 </button>
               </div>
 
@@ -257,14 +257,14 @@ export function ProductDetails() {
                 <div>
                   <div className="bg-[#EAF6ED] rounded-[16px] px-3.5 py-3 flex items-center justify-between">
                     <div className="flex items-baseline gap-2 flex-nowrap">
-                      <span className="text-[26px] font-bold text-zinc-900 leading-none tracking-tight whitespace-nowrap">{product.price.toLocaleString()} ₽</span>
-                      <span className="text-[13px] text-zinc-700 flex items-center whitespace-nowrap">физлицам <ChevronRight className="w-4 h-4 ml-0.5 text-zinc-500 shrink-0" /></span>
+                      <span className="text-lg font-bold text-zinc-900 leading-none tracking-tight whitespace-nowrap">{product.price.toLocaleString()} ₽</span>
+                      <span className="text-[11px] text-zinc-700 flex items-center whitespace-nowrap">физлицам <ChevronRight className="w-4 h-4 ml-0.5 text-zinc-500 shrink-0" /></span>
                     </div>
-                    <div className="bg-[#34A853] text-white font-bold text-[13px] px-2 py-1 rounded-md shrink-0 ml-2">
+                    <div className="bg-[#34A853] text-white font-bold text-[11px] px-2 py-1 rounded-md shrink-0 ml-2">
                       -3%
                     </div>
                   </div>
-                  <div className="text-[16px] text-zinc-600 font-bold line-through px-1.5 mt-3 tracking-tight">
+                  <div className="text-[13px] text-zinc-600 font-bold line-through px-1.5 mt-3 tracking-tight">
                     {oldPrice.toLocaleString()} ₽
                   </div>
                 </div>
@@ -276,14 +276,14 @@ export function ProductDetails() {
                       <Button variant="ghost" className="h-full w-14 hover:text-[#E30613] hover:bg-transparent rounded-l-xl text-zinc-500" onClick={() => updateQuantity(product.id, -1)}>
                         <Minus className="w-5 h-5" />
                       </Button>
-                      <div className="text-[16px] font-bold text-center flex-1">{inCart.quantity}</div>
+                      <div className="text-[13px] font-bold text-center flex-1">{inCart.quantity}</div>
                       <Button variant="ghost" className="h-full w-14 hover:text-[#E30613] hover:bg-transparent rounded-r-xl text-zinc-500" onClick={() => updateQuantity(product.id, 1)}>
                         <Plus className="w-5 h-5" />
                       </Button>
                     </div>
                   ) : (
                     <Button 
-                      className="w-full bg-[#D10000] hover:bg-[#B30000] text-white rounded-xl h-[52px] font-medium text-[16px] transition-colors flex items-center justify-center gap-2.5"
+                      className="w-full bg-[#D10000] hover:bg-[#B30000] text-white rounded-xl h-[52px] font-medium text-[13px] transition-colors flex items-center justify-center gap-2.5"
                       onClick={() => addToCart(product)}
                       disabled={product.stock === 0}
                     >
@@ -291,7 +291,7 @@ export function ProductDetails() {
                       {product.stock === 0 ? "Нет в наличии" : "В корзину"}
                     </Button>
                   )}
-                  <Button className="w-full bg-[#F0F2F5] hover:bg-[#E5E7EB] text-zinc-900 rounded-xl h-[52px] font-medium text-[16px] transition-colors border-0">
+                  <Button className="w-full bg-[#F0F2F5] hover:bg-[#E5E7EB] text-zinc-900 rounded-xl h-[52px] font-medium text-[13px] transition-colors border-0">
                     Быстрый заказ
                   </Button>
                 </div>
@@ -299,12 +299,12 @@ export function ProductDetails() {
                 {/* Installment Info */}
                 <div className="border border-[#E5E7EB] rounded-xl px-4 py-3.5 flex items-center justify-between">
                   <div className="flex items-center gap-2.5">
-                    <span className="font-bold bg-[#F3F4F6] text-zinc-600 px-2.5 flex items-center h-[26px] rounded-md text-[13px] leading-none line-through">
+                    <span className="font-bold bg-[#F3F4F6] text-zinc-600 px-2.5 flex items-center h-[26px] rounded-md text-[11px] leading-none line-through">
                       {Math.ceil(product.price / 4).toLocaleString()} ₽
                     </span>
-                    <span className="text-zinc-900 text-[15px]">× 4 платежа частями</span>
+                    <span className="text-zinc-900 text-xs">× 4 платежа частями</span>
                   </div>
-                  <div className="w-[18px] h-[18px] rounded-full border border-zinc-300 text-zinc-400 flex items-center justify-center text-[11px] pb-[1px] cursor-help shrink-0">i</div>
+                  <div className="w-[18px] h-[18px] rounded-full border border-zinc-300 text-zinc-400 flex items-center justify-center text-[10px] pb-[1px] cursor-help shrink-0">i</div>
                 </div>
 
                 <hr className="border-t border-[#F3F4F6]" />
@@ -313,14 +313,14 @@ export function ProductDetails() {
                 <div className="space-y-4">
                   <div className="flex gap-4">
                     <CheckCircle2 className="w-[22px] h-[22px] text-[#34A853] shrink-0 fill-[#34A853] text-white stroke-2 bg-white rounded-full mt-[2px]" style={{stroke: "white", fill: "#34A853"}} />
-                    <div className="text-[15px] leading-snug">
+                    <div className="text-xs leading-snug">
                       {product.stock} шт. <span className="border-b border-dashed border-zinc-500 text-zinc-900 cursor-pointer hover:border-zinc-900">есть на складе</span>
                     </div>
                   </div>
 
                   <div className="flex gap-4">
                     <Package className="w-[22px] h-[22px] text-zinc-900 shrink-0 mt-[2px]" strokeWidth={2} />
-                    <div className="text-[15px] leading-[1.4]">
+                    <div className="text-xs leading-[1.4]">
                       <span className="font-medium border-b border-dashed border-zinc-900 cursor-pointer hover:text-brand-red hover:border-brand-red pb-[1px]">Самовывоз:</span> завтра, <br/>
                       бесплатно, из 1 магазина
                     </div>
@@ -328,7 +328,7 @@ export function ProductDetails() {
 
                   <div className="flex gap-4">
                     <Truck className="w-[22px] h-[22px] text-zinc-900 shrink-0 mt-[2px]" strokeWidth={2} />
-                    <div className="text-[15px] leading-[1.4]">
+                    <div className="text-xs leading-[1.4]">
                       <span className="font-medium border-b border-dashed border-zinc-900 cursor-pointer hover:text-brand-red hover:border-brand-red pb-[1px]">Курьером:</span> с 24 апреля, <br/>
                       от 350 ₽
                     </div>
@@ -345,19 +345,19 @@ export function ProductDetails() {
       <div className="mb-12">
         <div className="flex items-center gap-6 border-b border-brand-border mb-6 overflow-x-auto scrollbar-hide">
           <button 
-            className={`pb-3 text-lg font-bold transition-colors whitespace-nowrap ${activeTab === "characteristics" ? "text-zinc-900 border-b-2 border-brand-red" : "text-zinc-500 hover:text-zinc-900"}`}
+            className={`pb-3 text-sm font-bold transition-colors whitespace-nowrap ${activeTab === "characteristics" ? "text-zinc-900 border-b-2 border-brand-red" : "text-zinc-500 hover:text-zinc-900"}`}
             onClick={() => setActiveTab("characteristics")}
           >
             Характеристики
           </button>
           <button 
-            className={`pb-3 text-lg font-bold transition-colors whitespace-nowrap ${activeTab === "description" ? "text-zinc-900 border-b-2 border-brand-red" : "text-zinc-500 hover:text-zinc-900"}`}
+            className={`pb-3 text-sm font-bold transition-colors whitespace-nowrap ${activeTab === "description" ? "text-zinc-900 border-b-2 border-brand-red" : "text-zinc-500 hover:text-zinc-900"}`}
             onClick={() => setActiveTab("description")}
           >
             Описание
           </button>
           <button 
-            className={`pb-3 text-lg font-bold transition-colors whitespace-nowrap ${activeTab === "reviews" ? "text-zinc-900 border-b-2 border-brand-red" : "text-zinc-500 hover:text-zinc-900"}`}
+            className={`pb-3 text-sm font-bold transition-colors whitespace-nowrap ${activeTab === "reviews" ? "text-zinc-900 border-b-2 border-brand-red" : "text-zinc-500 hover:text-zinc-900"}`}
             onClick={() => setActiveTab("reviews")}
           >
             Отзывы (12)
@@ -367,10 +367,10 @@ export function ProductDetails() {
         <div className="bg-white rounded-md border border-brand-border p-6 shadow-sm">
           {activeTab === "characteristics" && (
             <div className="max-w-3xl">
-              <h2 className="text-xl font-bold mb-6">Основные характеристики</h2>
+              <h2 className="text-base font-bold mb-6">Основные характеристики</h2>
               {product.characteristics && product.characteristics.length > 0 ? (
                 <div className="border border-brand-border rounded-md overflow-hidden">
-                  <table className="w-full text-sm text-left">
+                  <table className="w-full text-xs text-left">
                     <tbody>
                       {product.characteristics.map((char, idx) => (
                         <tr key={idx} className="border-b border-brand-border last:border-0 hover:bg-zinc-50/50 transition-colors">
@@ -389,7 +389,7 @@ export function ProductDetails() {
 
           {activeTab === "description" && (
             <div className="max-w-3xl">
-              <h2 className="text-xl font-bold mb-4">Описание товара</h2>
+              <h2 className="text-base font-bold mb-4">Описание товара</h2>
               {product.description ? (
                 <p className="text-zinc-600 leading-relaxed">
                   {product.description}
@@ -402,7 +402,7 @@ export function ProductDetails() {
 
           {activeTab === "reviews" && (
             <div className="max-w-3xl">
-               <h2 className="text-xl font-bold mb-4">Отзывы о товаре</h2>
+               <h2 className="text-base font-bold mb-4">Отзывы о товаре</h2>
                <p className="text-zinc-500">Этот раздел находится в разработке.</p>
             </div>
           )}
@@ -413,8 +413,8 @@ export function ProductDetails() {
       {similarProducts.length > 0 && (
         <div className="relative group mt-8 mb-12">
           <div className="flex items-baseline gap-4 mb-6">
-            <h2 className="text-[26px] md:text-[32px] font-bold text-zinc-900 tracking-tight">Аналогичные товары</h2>
-            <Link to={`/catalog?category=${encodeURIComponent(product.category)}`} className="text-[17px] text-zinc-500 hover:text-zinc-900 transition-colors">
+            <h2 className="text-lg md:text-[22px] font-bold text-zinc-900 tracking-tight">Аналогичные товары</h2>
+            <Link to={`/catalog?category=${encodeURIComponent(product.category)}`} className="text-[13px] text-zinc-500 hover:text-zinc-900 transition-colors">
               Смотреть все
             </Link>
           </div>
@@ -472,14 +472,14 @@ export function ProductDetails() {
                       </div>
 
                       {/* Badge (Bottom Left) */}
-                      <div className="absolute bottom-0 left-0 bg-[#34A853] text-white font-bold text-[13px] px-2 py-1 rounded-md">
+                      <div className="absolute bottom-0 left-0 bg-[#34A853] text-white font-bold text-[11px] px-2 py-1 rounded-md">
                         -{discount}%
                       </div>
                     </div>
                     
                     {/* Price Row */}
                     <div className="flex items-center justify-between mb-3 min-h-[44px]">
-                      <div className="text-[22px] md:text-[24px] font-bold text-zinc-900 tracking-tight">{similar.price} ₽</div>
+                      <div className="text-[15px] md:text-lg font-bold text-zinc-900 tracking-tight">{similar.price} ₽</div>
                       
                       {/* Cart Button (Always visible on hover, or if in cart) */}
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -505,12 +505,12 @@ export function ProductDetails() {
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-[14px] text-zinc-900 leading-[1.4] line-clamp-3 mb-2 flex-1">
+                    <h3 className="text-xs text-zinc-900 leading-[1.4] line-clamp-3 mb-2 flex-1">
                       {similar.name}
                     </h3>
                     
                     {/* Rating */}
-                    <div className="flex items-center gap-1.5 mt-auto text-[14px]">
+                    <div className="flex items-center gap-1.5 mt-auto text-xs">
                       <Star className="w-4 h-4 fill-[#E30613] text-[#E30613]" />
                       <span className="font-bold text-zinc-900">4.3</span>
                       <span className="text-zinc-500">(18)</span>
@@ -528,7 +528,7 @@ export function ProductDetails() {
       {complementaryProducts.length > 0 && (
         <div className="relative group mt-8 mb-12">
           <div className="flex items-baseline gap-4 mb-6">
-            <h2 className="text-[26px] md:text-[32px] font-bold text-zinc-900 tracking-tight">Сопутствующие товары</h2>
+            <h2 className="text-lg md:text-[22px] font-bold text-zinc-900 tracking-tight">Сопутствующие товары</h2>
           </div>
           
           <div className="relative">
@@ -583,14 +583,14 @@ export function ProductDetails() {
                       </div>
 
                       {/* Badge (Bottom Left) */}
-                      <div className="absolute bottom-0 left-0 bg-[#34A853] text-white font-bold text-[13px] px-2 py-1 rounded-md">
+                      <div className="absolute bottom-0 left-0 bg-[#34A853] text-white font-bold text-[11px] px-2 py-1 rounded-md">
                         -{discount}%
                       </div>
                     </div>
                     
                     {/* Price Row */}
                     <div className="flex items-center justify-between mb-3 min-h-[44px]">
-                      <div className="text-[22px] md:text-[24px] font-bold text-zinc-900 tracking-tight">{comp.price} ₽</div>
+                      <div className="text-[15px] md:text-lg font-bold text-zinc-900 tracking-tight">{comp.price} ₽</div>
                       
                       {/* Cart Button */}
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
@@ -616,12 +616,12 @@ export function ProductDetails() {
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-[14px] text-zinc-900 leading-[1.4] line-clamp-3 mb-2 flex-1">
+                    <h3 className="text-xs text-zinc-900 leading-[1.4] line-clamp-3 mb-2 flex-1">
                       {comp.name}
                     </h3>
                     
                     {/* Rating */}
-                    <div className="flex items-center gap-1.5 mt-auto text-[14px]">
+                    <div className="flex items-center gap-1.5 mt-auto text-xs">
                       <Star className="w-4 h-4 fill-[#E30613] text-[#E30613]" />
                       <span className="font-bold text-zinc-900">4.9</span>
                       <span className="text-zinc-500">(12)</span>

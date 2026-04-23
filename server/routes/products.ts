@@ -9,11 +9,22 @@ productsRouter.get('/', async (req, res) => {
       const offset = parseInt(req.query.offset as string) || 0;
       const category = req.query.category as string;
       const search = req.query.search as string;
+      const ids = req.query.ids as string;
       
       let query = 'SELECT * FROM products';
       const params: any[] = [];
       const conditions: string[] = [];
       let paramCount = 1;
+
+      if (ids) {
+        const idList = ids.split(',').map(id => id.trim()).filter(Boolean);
+        if (idList.length > 0) {
+           const placeholders = idList.map((_, i) => `$${paramCount + i}`);
+           conditions.push(`id IN (${placeholders.join(', ')})`);
+           params.push(...idList);
+           paramCount += idList.length;
+        }
+      }
 
       if (category) {
         // Find the requested category by name to get its exact ID

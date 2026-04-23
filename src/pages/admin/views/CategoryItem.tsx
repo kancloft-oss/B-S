@@ -16,7 +16,7 @@ export function CategoryItem({ node, depth, onEdit, onDelete, toggleExpand, isEx
   const isFolder = node.children && node.children.length > 0;
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-1.5 py-1 px-1 border-b hover:bg-zinc-100 group text-[11px] font-mono whitespace-nowrap">
+    <div ref={setNodeRef} style={style} className="flex items-center gap-1.5 py-1 px-1 border-b hover:bg-zinc-100 group text-[10px] font-mono whitespace-nowrap">
       <div {...attributes} {...listeners} className="cursor-grab text-zinc-300 opacity-0 group-hover:opacity-100">
         ⋮⋮
       </div>

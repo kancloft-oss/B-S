@@ -36,15 +36,15 @@ export default function SystemLogsView() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Системный мониторинг</h2>
+      <h2 className="text-lg font-bold">Системный мониторинг</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">Пользователей онлайн</CardTitle>
+            <CardTitle className="text-xs font-medium text-zinc-500">Пользователей онлайн</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
+            <div className="text-[22px] font-bold flex items-center gap-2">
               <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
               42
             </div>
@@ -52,10 +52,10 @@ export default function SystemLogsView() {
         </Card>
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">Нагрузка на сервер</CardTitle>
+            <CardTitle className="text-xs font-medium text-zinc-500">Нагрузка на сервер</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">18%</div>
+            <div className="text-[22px] font-bold">18%</div>
             <div className="w-full bg-zinc-100 h-2 rounded-full mt-2 overflow-hidden">
               <div className="bg-emerald-500 h-full w-[18%]"></div>
             </div>
@@ -63,10 +63,10 @@ export default function SystemLogsView() {
         </Card>
         <Card className="border-none shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-zinc-500">Ошибок за 24ч</CardTitle>
+            <CardTitle className="text-xs font-medium text-zinc-500">Ошибок за 24ч</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-500">{logs.filter((l: any) => l.type === 'error').length}</div>
+            <div className="text-[22px] font-bold text-red-500">{logs.filter((l: any) => l.type === 'error').length}</div>
           </CardContent>
         </Card>
       </div>
@@ -77,7 +77,7 @@ export default function SystemLogsView() {
           <Button variant="outline" size="sm">Очистить логи</Button>
         </CardHeader>
         <CardContent>
-          <div className="bg-zinc-900 rounded-xl p-4 font-mono text-xs text-zinc-300 space-y-2 overflow-x-auto min-h-[300px]">
+          <div className="bg-zinc-900 rounded-xl p-4 font-mono text-[11px] text-zinc-300 space-y-2 overflow-x-auto min-h-[300px]">
             {logs.length === 0 ? (
               <div className="text-zinc-500 italic">Логи пока пусты...</div>
             ) : logs.map((log: any) => (

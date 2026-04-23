@@ -95,7 +95,7 @@ export default function ProductMatrixView() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Товарная матрица</h2>
+        <h2 className="text-lg font-bold">Товарная матрица</h2>
         <div className="flex gap-4">
           <form onSubmit={handleSearch} className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
@@ -116,8 +116,8 @@ export default function ProductMatrixView() {
           <CardContent className="p-4 flex items-center gap-4">
             <div className="bg-red-100 p-3 rounded-xl"><AlertCircle className="w-6 h-6 text-red-600" /></div>
             <div>
-              <div className="text-2xl font-bold text-red-700">12</div>
-              <div className="text-xs text-red-600 font-medium">Товары на исходе</div>
+              <div className="text-lg font-bold text-red-700">12</div>
+              <div className="text-[11px] text-red-600 font-medium">Товары на исходе</div>
             </div>
           </CardContent>
         </Card>
@@ -125,8 +125,8 @@ export default function ProductMatrixView() {
           <CardContent className="p-4 flex items-center gap-4">
             <div className="bg-emerald-100 p-3 rounded-xl"><TrendingUp className="w-6 h-6 text-emerald-600" /></div>
             <div>
-              <div className="text-2xl font-bold text-emerald-700">45</div>
-              <div className="text-xs text-emerald-600 font-medium">Топ продаж</div>
+              <div className="text-lg font-bold text-emerald-700">45</div>
+              <div className="text-[11px] text-emerald-600 font-medium">Топ продаж</div>
             </div>
           </CardContent>
         </Card>
@@ -134,8 +134,8 @@ export default function ProductMatrixView() {
           <CardContent className="p-4 flex items-center gap-4">
             <div className="bg-blue-100 p-3 rounded-xl"><RefreshCcw className="w-6 h-6 text-blue-600" /></div>
             <div>
-              <div className="text-2xl font-bold text-blue-700">13 000+</div>
-              <div className="text-xs text-blue-600 font-medium">Товаров в базе</div>
+              <div className="text-lg font-bold text-blue-700">13 000+</div>
+              <div className="text-[11px] text-blue-600 font-medium">Товаров в базе</div>
             </div>
           </CardContent>
         </Card>
@@ -167,7 +167,7 @@ export default function ProductMatrixView() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="font-mono text-xs">{product.sku}</TableCell>
+                <TableCell className="font-mono text-[11px]">{product.sku}</TableCell>
                 <TableCell>{product.category || 'Инструмент'}</TableCell>
                 <TableCell className="font-bold text-zinc-900">{product.price} ₽</TableCell>
                 <TableCell className="text-zinc-500">{product.purchasePrice || 0} ₽</TableCell>
