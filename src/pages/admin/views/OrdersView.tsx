@@ -7,7 +7,7 @@ import {
   Edit2, Save, X, Search, Image as ImageIcon, Tag, UserPlus, LogOut, 
   Activity, ShieldAlert, Calendar, Download, Filter, ArrowUpRight, ArrowDownRight,
   UserCheck, UserMinus, Flame, Thermometer, Snowflake, Mail, Phone, MapPin,
-  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal, Star
+  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal, Star, ZoomIn
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
@@ -23,11 +23,20 @@ import * as XLSX from 'xlsx';
 import { Product, OrderItem, Order, Client, Banner, AdminUser, Task, OperationType } from '../types';
 import { handleFirestoreError, getStatusBadge, getSegmentIcon } from '../utils';
 
+// Image Zoom Modal Component
+const ImageZoom = ({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80" onClick={onClose}>
+    <img src={src} alt={alt} className="max-w-full max-h-full object-contain" />
+    <Button variant="ghost" className="absolute top-4 right-4 text-white hover:text-red-400" onClick={onClose}><X /></Button>
+  </div>
+);
+
 // 2. Orders View (Enhanced)
 export default function OrdersView() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filter, setFilter] = useState("all");
+  const [zoomedImage, setZoomedImage] = useState<{src: string, alt: string} | null>(null);
 
   useEffect(() => {
     fetchOrders();
@@ -36,9 +45,28 @@ export default function OrdersView() {
   const fetchOrders = async () => {
     try {
       const res = await fetch('/api/orders');
-      if(res.ok) {
-        const data = await res.json();
-        setOrders(data);
+      if (res.ok) {
+        const ordersData = await res.json();
+        
+        // Fetch product details for items
+        const enhancedOrders = await Promise.all(ordersData.map(async (order: any) => {
+          const itemsWithProducts = await Promise.all((order.items || []).map(async (item: any) => {
+            let productData;
+            try {
+              const pRes = await fetch(`/api/products/${item.productId}`);
+              if (pRes.ok) {
+                const contentType = pRes.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                  productData = await pRes.json();
+                }
+              }
+            } catch (err) {}
+            return { ...item, product: productData };
+          }));
+          return { ...order, items: itemsWithProducts } as Order;
+        }));
+        
+        setOrders(enhancedOrders);
       }
     } catch (error) {
       console.error(error);
@@ -76,6 +104,7 @@ export default function OrdersView() {
   if (selectedOrder) {
     return (
       <div className="space-y-6">
+        {zoomedImage && <ImageZoom src={zoomedImage.src} alt={zoomedImage.alt} onClose={() => setZoomedImage(null)} />}
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => setSelectedOrder(null)}>
             <ChevronLeft className="w-4 h-4" />
@@ -101,8 +130,21 @@ export default function OrdersView() {
                 </TableHeader>
                 <TableBody>
                   {selectedOrder.items.map((item, idx) => (
-                    <TableRow key={idx}>
-                      <TableCell className="font-medium">{item.productId}</TableCell>
+                    <TableRow key={`${item.productId}-${idx}`}>
+                      <TableCell className="flex items-center gap-3">
+                        <div className="relative group w-10 h-10 shrink-0">
+                          <img 
+                            src={item.product?.image || '/placeholder.png'} 
+                            alt={item.product?.name || 'Товар'} 
+                            className="w-full h-full object-cover rounded-md cursor-pointer"
+                            onClick={() => setZoomedImage({src: item.product?.image || '/placeholder.png', alt: item.product?.name || 'Товар'})}
+                          />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-md pointer-events-none">
+                            <ZoomIn className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                        <span className="font-medium text-xs">{item.product?.name || item.productId}</span>
+                      </TableCell>
                       <TableCell>{item.qty} шт.</TableCell>
                       <TableCell>{item.price} ₽</TableCell>
                       <TableCell className="text-right font-bold">{item.qty * item.price} ₽</TableCell>
@@ -116,7 +158,8 @@ export default function OrdersView() {
               </Table>
             </CardContent>
           </Card>
-
+          
+          {/* ... (rest of the card content: customer info and actions remain unchanged) */}
           <div className="space-y-6">
             <Card className="border-none shadow-sm">
               <CardHeader>

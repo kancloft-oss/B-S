@@ -46,6 +46,8 @@ export interface Client {
   lastPurchaseDate: string;
   segment: 'hot' | 'warm' | 'medium' | 'cold' | 'dormant';
   rating: number;
+  isBlocked?: boolean;
+  avatar?: string;
 }
 
 export interface Banner {

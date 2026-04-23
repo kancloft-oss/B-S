@@ -7,7 +7,7 @@ import {
   Edit2, Save, X, Search, Image as ImageIcon, Tag, UserPlus, LogOut, 
   Activity, ShieldAlert, Calendar, Download, Filter, ArrowUpRight, ArrowDownRight,
   UserCheck, UserMinus, Flame, Thermometer, Snowflake, Mail, Phone, MapPin,
-  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal, Star
+  CheckSquare, ListTodo, FileText, Database, Zap, Monitor, Terminal, Star, ZoomIn
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
@@ -30,25 +30,53 @@ export default function CRMView() {
   const [search, setSearch] = useState("");
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [zoomedImage, setZoomedImage] = useState<{src: string, alt: string} | null>(null);
+
+  // Image Zoom Modal Component
+  const ImageZoom = ({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80" onClick={onClose}>
+      <img src={src} alt={alt} className="max-w-full max-h-full object-contain" />
+      <Button variant="ghost" className="absolute top-4 right-4 text-white hover:text-red-400" onClick={onClose}><X /></Button>
+    </div>
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await fetch('/api/orders');
         const ordersData = res.ok ? await res.json() : [];
-        setOrders(ordersData);
+        
+        // Enrich orders with product details
+        const enhancedOrders = await Promise.all(ordersData.map(async (order: any) => {
+          const itemsWithProducts = await Promise.all((order.items || []).map(async (item: any) => {
+            let productData;
+            try {
+              const pRes = await fetch(`/api/products/${item.productId}`);
+              if (pRes.ok) {
+                const contentType = pRes.headers.get("content-type");
+                if (contentType && contentType.includes("application/json")) {
+                  productData = await pRes.json();
+                }
+              }
+            } catch (err) {}
+            return { ...item, product: productData };
+          }));
+          return { ...order, items: itemsWithProducts } as Order;
+        }));
+        setOrders(enhancedOrders);
 
         // Group orders by phone or customer name to identify unique clients
         const clientMap = new Map<string, { name: string, phone: string, orders: Order[] }>();
         
-        ordersData.forEach(order => {
+        enhancedOrders.forEach(order => {
           const key = order.phone || order.customer;
           if (!clientMap.has(key)) {
             clientMap.set(key, { name: order.customer, phone: order.phone, orders: [] });
           }
           clientMap.get(key)!.orders.push(order);
         });
-
+        
+        // ... (rest of the client calculation remains same)
         const calculatedClients: Client[] = Array.from(clientMap.entries()).map(([key, data], index) => {
           const clientOrders = data.orders.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
           const totalSpent = clientOrders.reduce((sum, o) => sum + o.total, 0);
@@ -56,9 +84,7 @@ export default function CRMView() {
           const orderCount = clientOrders.length;
           
           // Segmentation Logic (RFM-ish)
-          // Recency: days since last purchase
           const daysSinceLast = lastPurchaseDate ? Math.floor((new Date().getTime() - new Date(lastPurchaseDate).getTime()) / (1000 * 60 * 60 * 24)) : 999;
-          // Frequency: orders per month (simplified)
           const frequency = orderCount;
 
           let segment: Client['segment'] = 'medium';
@@ -67,13 +93,12 @@ export default function CRMView() {
           else if (daysSinceLast > 90) segment = 'dormant';
           else if (daysSinceLast > 60) segment = 'cold';
 
-          // Rating calculation (1-5)
           const rating = Math.min(5, Math.max(1, (orderCount * 0.5) + (totalSpent / 10000)));
 
           return {
             id: String(index + 1),
             name: data.name,
-            email: "", // Not always available in order
+            email: "",
             phone: data.phone,
             points: Math.floor(totalSpent * 0.05),
             status: daysSinceLast < 60 ? 'active' : 'inactive',
@@ -101,6 +126,21 @@ export default function CRMView() {
     c.phone.includes(search)
   );
 
+  const toggleBlockClient = async (client: Client) => {
+    try {
+      const isBlocked = !client.isBlocked;
+      await fetch(`/api/clients/${client.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isBlocked })
+      });
+      setClients(clients.map(c => c.id === client.id ? { ...c, isBlocked } : c));
+      setSelectedClient({ ...client, isBlocked });
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const clientOrders = selectedClient 
     ? orders.filter(o => (o.phone === selectedClient.phone || o.customer === selectedClient.name))
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -111,6 +151,7 @@ export default function CRMView() {
   if (selectedClient) {
     return (
       <div className="space-y-6">
+        {zoomedImage && <ImageZoom src={zoomedImage.src} alt={zoomedImage.alt} onClose={() => setZoomedImage(null)} />}
         <div className="flex items-center gap-4">
           <Button variant="outline" size="icon" onClick={() => setSelectedClient(null)}>
             <ChevronLeft className="w-4 h-4" />
@@ -146,11 +187,24 @@ export default function CRMView() {
                     </div>
                     <div className="pt-2 border-t border-zinc-100">
                       <div className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest mb-2">Товары</div>
-                      <div className="space-y-1">
+                      <div className="space-y-2">
                         {order.items.map((item, idx) => (
-                          <div key={idx} className="flex justify-between text-[11px]">
-                            <span className="text-zinc-600">{item.productId} x {item.qty}</span>
-                            <span className="font-medium">{item.price * item.qty} ₽</span>
+                          <div key={`${item.productId}-${idx}`} className="flex justify-between items-center text-[11px]">
+                            <div className="flex items-center gap-2">
+                              <div className="relative group w-8 h-8 shrink-0">
+                                <img 
+                                  src={item.product?.image || '/placeholder.png'} 
+                                  alt={item.product?.name || 'Товар'} 
+                                  className="w-full h-full object-cover rounded-md cursor-pointer"
+                                  onClick={() => setZoomedImage({src: item.product?.image || '/placeholder.png', alt: item.product?.name || 'Товар'})}
+                                />
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-md pointer-events-none">
+                                  <ZoomIn className="w-3 h-3 text-white" />
+                                </div>
+                              </div>
+                              <span className="text-zinc-600 font-medium">{item.product?.name || item.productId}</span>
+                            </div>
+                            <span className="font-medium whitespace-nowrap">{item.qty} шт. × {item.price} ₽</span>
                           </div>
                         ))}
                       </div>
@@ -168,12 +222,19 @@ export default function CRMView() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 text-lg font-bold">
-                    {selectedClient.name[0]}
+                  <div className="w-16 h-16 rounded-2xl bg-orange-100 flex items-center justify-center text-orange-600 text-lg font-bold overflow-hidden">
+                      <img 
+                        src={selectedClient.avatar || `https://api.dicebear.com/7.x/initials/svg?seed=${selectedClient.name}`} 
+                        alt={selectedClient.name} 
+                        className="w-full h-full object-cover" 
+                      />
                   </div>
                   <div>
                     <div className="font-bold text-sm">{selectedClient.name}</div>
                     <div className="text-xs text-zinc-500">{selectedClient.phone}</div>
+                    <Badge variant={selectedClient.isBlocked ? "destructive" : "secondary"} className="mt-1">
+                      {selectedClient.isBlocked ? "Заблокирован" : "Активен"}
+                    </Badge>
                   </div>
                 </div>
 
@@ -200,13 +261,21 @@ export default function CRMView() {
                 </div>
 
                 <div className="pt-4 border-t border-zinc-100">
-                  <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Коммуникация</div>
+                  <div className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest mb-3">Коммуникация и Безопасность</div>
                   <div className="space-y-2">
                     <Button variant="outline" className="w-full justify-start gap-3 rounded-xl h-11">
                       <Mail className="w-4 h-4 text-zinc-400" /> Написать Email
                     </Button>
                     <Button variant="outline" className="w-full justify-start gap-3 rounded-xl h-11">
                       <Phone className="w-4 h-4 text-zinc-400" /> Позвонить
+                    </Button>
+                    <Button 
+                      variant={selectedClient.isBlocked ? "outline" : "destructive"} 
+                      className="w-full justify-start gap-3 rounded-xl h-11"
+                      onClick={() => toggleBlockClient(selectedClient)}
+                    >
+                      <ShieldAlert className="w-4 h-4" /> 
+                      {selectedClient.isBlocked ? "Разблокировать" : "Заблокировать"}
                     </Button>
                   </div>
                 </div>
